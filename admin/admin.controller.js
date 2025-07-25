@@ -92,4 +92,74 @@ exports.createCategory = async (req, res) => {
   } catch (err) {
     res.status(500).json({ status: false, message: 'Server error', data: { error: err.message } });
   }
+};
+
+exports.getCategories = async (req, res) => {
+  try {
+    const categories = await Category.find({ isDeleted: false });
+    res.json({ status: true, message: 'Categories fetched', data: { categories } });
+  } catch (err) {
+    res.status(500).json({ status: false, message: 'Server error', data: { error: err.message } });
+  }
+};
+
+exports.getCategoryById = async (req, res) => {
+  try {
+    const category = await Category.findById(req.params.id);
+    if (!category || category.isDeleted) {
+      return res.status(404).json({ status: false, message: 'Category not found', data: {} });
+    }
+    res.json({ status: true, message: 'Category fetched', data: { category } });
+  } catch (err) {
+    res.status(500).json({ status: false, message: 'Server error', data: { error: err.message } });
+  }
+};
+
+exports.updateCategory = async (req, res) => {
+  try {
+    const { title, slug, isSuspended, isDeleted, images } = req.body;
+    const updateData = {};
+    if (title) updateData.title = title;
+    if (slug) updateData.slug = slug;
+    if (typeof isSuspended !== 'undefined') updateData.isSuspended = isSuspended;
+    if (typeof isDeleted !== 'undefined') updateData.isDeleted = isDeleted;
+    if (images) updateData.images = images;
+    const category = await Category.findByIdAndUpdate(req.params.id, updateData, { new: true });
+    if (!category || category.isDeleted) {
+      return res.status(404).json({ status: false, message: 'Category not found', data: {} });
+    }
+    res.json({ status: true, message: 'Category updated', data: { category } });
+  } catch (err) {
+    res.status(500).json({ status: false, message: 'Server error', data: { error: err.message } });
+  }
+};
+
+exports.deleteCategory = async (req, res) => {
+  try {
+    const category = await Category.findByIdAndUpdate(req.params.id, { isDeleted: true }, { new: true });
+    if (!category) {
+      return res.status(404).json({ status: false, message: 'Category not found', data: {} });
+    }
+    res.json({ status: true, message: 'Category deleted', data: { category } });
+  } catch (err) {
+    res.status(500).json({ status: false, message: 'Server error', data: { error: err.message } });
+  }
+};
+
+exports.createAdmin = async (req, res) => {
+  const { email, password, name } = req.body;
+  if (!email || !password || !name) {
+    return res.status(400).json({ status: false, message: 'Email, password, and name are required.' });
+  }
+  try {
+    const existing = await Admin.findOne({ email });
+    if (existing) {
+      return res.status(400).json({ status: false, message: 'Admin already exists.' });
+    }
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const admin = await Admin.create({ email, password: hashedPassword, name });
+    res.status(201).json({ status: true, message: 'Admin created', data: { admin } });
+  } catch (err) {
+    res.status(500).json({ status: false, message: 'Server error', data: { error: err.message } });
+  }
 }; 

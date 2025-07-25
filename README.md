@@ -8,9 +8,9 @@
    ```
 2. Set up your MongoDB connection in `.env`:
    ```env
-   MONGODB_URI=mongodb://localhost:27017/bannerdb
-   JWT_SECRET=your_jwt_secret
-   PORT=5000
+  MONGODB_URI=mongodb+srv://staging:staging@staging-dev.covjpki.mongodb.net
+  JWT_SECRET=dfasdfaserfasdfawerafsdwer
+  PORT=4000
    ```
 3. Start the server:
    ```bash

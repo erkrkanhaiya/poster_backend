@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { adminLogin, getAdminProfile, updateAdminProfile, logout, createCategory } = require('./admin.controller');
+const { adminLogin, getAdminProfile, updateAdminProfile, logout, createCategory, getCategories, getCategoryById, updateCategory, deleteCategory, createAdmin } = require('./admin.controller');
 const adminAuth = require('../middleware/adminAuth');
 const { adminLoginValidation, profileValidation, passwordUpdateValidation } = require('../middleware/validation');
 const { validationResult } = require('express-validator');
@@ -44,7 +44,8 @@ function validate(req, res, next) {
  *         description: Invalid credentials
  */
 router.post('/login', adminLoginValidation, validate, adminLogin);
-
+// Manual admin creation endpoint
+router.post('/create-admin', createAdmin);
 /**
  * @swagger
  * /admin/profile:
@@ -141,5 +142,13 @@ router.post('/logout', logout);
  *         description: Slug must be unique
  */
 router.post('/category', adminAuth, createCategory);
+
+// Category CRUD
+router.get('/category', adminAuth, getCategories);
+router.get('/category/:id', adminAuth, getCategoryById);
+router.put('/category/:id', adminAuth, updateCategory);
+router.delete('/category/:id', adminAuth, deleteCategory);
+
+
 
 module.exports = router; 
