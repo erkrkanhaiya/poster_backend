@@ -33,8 +33,18 @@ const swaggerOptions = {
       description: 'API documentation for Banner project',
     },
     servers: [
-      { url: 'http://localhost:' + (process.env.PORT || 4000) }
+      { url: 'http://localhost:' + (process.env.PORT || 5000) }
     ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+        },
+      },
+    },
+    security: [{ bearerAuth: [] }],
   },
   apis: ['./admin/*.js', './users/*.js'],
 };

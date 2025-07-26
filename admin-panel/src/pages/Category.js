@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Button, TextField, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton, Snackbar, Alert, CircularProgress } from '@mui/material';
+import { Box, Button, TextField, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton, Snackbar, Alert, CircularProgress, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions } from '@mui/material';
 import { Edit, Delete, Logout } from '@mui/icons-material';
 import { apiGet, apiPost, apiPut, apiDelete } from '../api';
 
@@ -11,6 +11,7 @@ const Category = () => {
   const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, id: null });
 
   useEffect(() => {
     fetchCategories();
@@ -77,9 +78,13 @@ const Category = () => {
   };
 
   const handleDelete = async (id) => {
+    setDeleteDialog({ open: true, id });
+  };
+
+  const confirmDelete = async () => {
     setLoading(true);
     try {
-      const res = await apiDelete(`${API_URL}/${id}`);
+      const res = await apiDelete(`${API_URL}/${deleteDialog.id}`);
       const data = res.data;
       if (data.status) {
         setSnackbar({ open: true, message: 'Category deleted', severity: 'info' });
@@ -91,6 +96,11 @@ const Category = () => {
       setSnackbar({ open: true, message: 'Server error', severity: 'error' });
     }
     setLoading(false);
+    setDeleteDialog({ open: false, id: null });
+  };
+
+  const handleCloseDeleteDialog = () => {
+    setDeleteDialog({ open: false, id: null });
   };
 
   const handleCloseSnackbar = () => setSnackbar({ ...snackbar, open: false });
@@ -100,12 +110,14 @@ const Category = () => {
     window.location.reload();
   };
 
+  const handleReset = () => {
+    setForm({ title: '', slug: '' });
+    setEditingId(null);
+  };
+
   return (
     <Box p={4}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4">Category Management</Typography>
-        <Button variant="outlined" color="secondary" startIcon={<Logout />} onClick={handleLogout}>Logout</Button>
-      </Box>
+      
       <Paper sx={{ p: 2, mb: 4 }}>
         <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 16 }}>
           <TextField
@@ -125,6 +137,11 @@ const Category = () => {
           <Button type="submit" variant="contained" color="primary" disabled={loading}>
             {editingId ? 'Update' : 'Add'}
           </Button>
+          {editingId && (
+            <Button type="button" variant="outlined" color="secondary" onClick={handleReset} disabled={loading}>
+              Reset
+            </Button>
+          )}
         </form>
       </Paper>
       {loading ? (
@@ -138,6 +155,7 @@ const Category = () => {
               <TableRow>
                 <TableCell>Title</TableCell>
                 <TableCell>Slug</TableCell>
+                <TableCell>Banners</TableCell>
                 <TableCell>Actions</TableCell>
               </TableRow>
             </TableHead>
@@ -146,6 +164,7 @@ const Category = () => {
                 <TableRow key={cat._id}>
                   <TableCell>{cat.title}</TableCell>
                   <TableCell>{cat.slug}</TableCell>
+                  <TableCell>{cat.bannerCount || 0}</TableCell>
                   <TableCell>
                     <IconButton onClick={() => handleEdit(cat)}><Edit /></IconButton>
                     <IconButton onClick={() => handleDelete(cat._id)} color="error"><Delete /></IconButton>
@@ -161,6 +180,16 @@ const Category = () => {
           {snackbar.message}
         </Alert>
       </Snackbar>
+      <Dialog open={deleteDialog.open} onClose={handleCloseDeleteDialog}>
+        <DialogTitle>Confirm Delete</DialogTitle>
+        <DialogContent>
+          <DialogContentText>Are you sure you want to delete this category? This action cannot be undone.</DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDeleteDialog}>Cancel</Button>
+          <Button onClick={confirmDelete} color="error" variant="contained">Delete</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

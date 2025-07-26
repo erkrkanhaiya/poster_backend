@@ -2,6 +2,36 @@ const Admin = require('../common/admin.model');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const Category = require('../common/category.model');
+const Banner = require('../common/banner.model');
+const AWS = require('aws-sdk');
+const multer = require('multer');
+const multerS3 = require('multer-s3');
+
+// S3 config (replace with your credentials and bucket)
+const s3 = new AWS.S3({
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  region: process.env.AWS_REGION,
+});
+
+console.log('AWS_BUCKET:', process.env.AWS_BUCKET);
+
+const upload = multer({
+  storage: multerS3({
+    s3,
+    bucket: process.env.AWS_BUCKET, // <-- FIXED
+    // acl: 'public-read',
+    metadata: function (req, file, cb) {
+      cb(null, { fieldName: file.fieldname });
+    },
+    key: function (req, file, cb) {
+      cb(null, `banners${Date.now()}_${file.originalname}`);
+    }
+  })
+});
+
+// Middleware for banner image upload (multiple)
+exports.uploadBannerImages = upload.array('images', 10);
 
 async function createDefaultAdmin() {
   const email = 'admin@example.com';
@@ -97,7 +127,19 @@ exports.createCategory = async (req, res) => {
 exports.getCategories = async (req, res) => {
   try {
     const categories = await Category.find({ isDeleted: false });
-    res.json({ status: true, message: 'Categories fetched', data: { categories } });
+    // Get banner count for each category
+    const categoryIds = categories.map(cat => cat._id);
+    const bannerCounts = await Banner.aggregate([
+      { $match: { category: { $in: categoryIds } } },
+      { $group: { _id: '$category', count: { $sum: 1 } } }
+    ]);
+    const countMap = {};
+    bannerCounts.forEach(bc => { countMap[bc._id.toString()] = bc.count; });
+    const categoriesWithCount = categories.map(cat => ({
+      ...cat.toObject(),
+      bannerCount: countMap[cat._id.toString()] || 0
+    }));
+    res.json({ status: true, message: 'Categories fetched', data: { categories: categoriesWithCount } });
   } catch (err) {
     res.status(500).json({ status: false, message: 'Server error', data: { error: err.message } });
   }
@@ -159,6 +201,103 @@ exports.createAdmin = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     const admin = await Admin.create({ email, password: hashedPassword, name });
     res.status(201).json({ status: true, message: 'Admin created', data: { admin } });
+  } catch (err) {
+    res.status(500).json({ status: false, message: 'Server error', data: { error: err.message } });
+  }
+};
+
+exports.getBanners = async (req, res) => {
+  try {
+    const banners = await Banner.find().populate('category', 'title');
+    res.json({ status: true, message: 'Banners fetched', data: { banners } });
+  } catch (err) {
+    res.status(500).json({ status: false, message: 'Server error', data: { error: err.message } });
+  }
+};
+
+exports.getBannerById = async (req, res) => {
+  try {
+    const banner = await Banner.findById(req.params.id).populate('category', 'title');
+    if (!banner) return res.status(404).json({ status: false, message: 'Banner not found', data: {} });
+    res.json({ status: true, message: 'Banner fetched', data: { banner } });
+  } catch (err) {
+    res.status(500).json({ status: false, message: 'Server error', data: { error: err.message } });
+  }
+};
+
+exports.createBanner = async (req, res) => {
+  try {
+    const { title, category } = req.body;
+    if (!title || !category || !req.files || req.files.length === 0) {
+      return res.status(400).json({ status: false, message: 'Title, category, and images are required', data: {} });
+    }
+    const imageUrls = req.files.map(file => file.location);
+    const banner = await Banner.create({ title, images: imageUrls, category });
+    res.status(201).json({ status: true, message: 'Banner created', data: { banner } });
+  } catch (err) {
+    res.status(500).json({ status: false, message: 'Server error', data: { error: err.message } });
+  }
+};
+
+exports.updateBanner = async (req, res) => {
+  try {
+    const { title, image, category } = req.body;
+    const updateData = {};
+    if (title) updateData.title = title;
+    if (image) updateData.image = image;
+    if (category) updateData.category = category;
+    const banner = await Banner.findByIdAndUpdate(req.params.id, updateData, { new: true });
+    if (!banner) return res.status(404).json({ status: false, message: 'Banner not found', data: {} });
+    res.json({ status: true, message: 'Banner updated', data: { banner } });
+  } catch (err) {
+    res.status(500).json({ status: false, message: 'Server error', data: { error: err.message } });
+  }
+};
+
+exports.deleteBanner = async (req, res) => {
+  try {
+    const banner = await Banner.findById(req.params.id);
+    if (!banner) return res.status(404).json({ status: false, message: 'Banner not found', data: {} });
+    // Remove images from S3
+    const keys = (banner.images || []).map(url => {
+      // Extract the S3 key from the URL
+      const match = url.match(/\/([^/]+\/[^?]+)/);
+      return match ? match[1] : null;
+    }).filter(Boolean);
+    if (keys.length > 0) {
+      const objects = keys.map(Key => ({ Key }));
+      await s3.deleteObjects({
+        Bucket: process.env.AWS_BUCKET,
+        Delete: { Objects: objects }
+      }).promise();
+    }
+    await Banner.findByIdAndDelete(req.params.id);
+    res.json({ status: true, message: 'Banner deleted', data: { banner } });
+  } catch (err) {
+    res.status(500).json({ status: false, message: 'Server error', data: { error: err.message } });
+  }
+};
+
+exports.deleteBannerImage = async (req, res) => {
+  const { bannerId } = req.params;
+  const { imageUrl } = req.body;
+  if (!imageUrl) return res.status(400).json({ status: false, message: 'Image URL required', data: {} });
+  try {
+    const banner = await Banner.findById(bannerId);
+    if (!banner) return res.status(404).json({ status: false, message: 'Banner not found', data: {} });
+    // Remove image from S3
+    const match = imageUrl.match(/\/([^/]+\/[^?]+)/);
+    const key = match ? match[1] : null;
+    if (key) {
+      await s3.deleteObject({
+        Bucket: process.env.AWS_BUCKET, // Use the consistent env variable
+        Key: key
+      }).promise();
+    }
+    // Remove image from banner
+    banner.images = banner.images.filter(img => img !== imageUrl);
+    await banner.save();
+    res.json({ status: true, message: 'Image deleted', data: { banner } });
   } catch (err) {
     res.status(500).json({ status: false, message: 'Server error', data: { error: err.message } });
   }
