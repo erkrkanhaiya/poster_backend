@@ -11,6 +11,9 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
+// Serve static files from uploads directory
+app.use('/uploads', express.static('uploads'));
+
 // MongoDB Connection
 console.log('process.env.MONGODB_URI', "MONGODB_URIMONGODB_URIMONGODB_URI");
 mongoose.connect(process.env.MONGODB_URI, {
@@ -22,6 +25,10 @@ mongoose.connect(process.env.MONGODB_URI, {
 
 // Routes
 app.use('/admin', require('./admin/admin.routes'));
+app.use('/admin/settings', require('./admin/settings.routes'));
+app.use('/users/settings', require('./users/settings.routes'));
+app.use('/users/pages', require('./users/page.routes'));
+app.use('/users/categories', require('./users/category.routes'));
 app.use('/users', require('./users/users.routes'));
 
 const swaggerOptions = {

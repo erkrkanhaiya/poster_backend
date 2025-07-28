@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { userLoginOrRegister, completeProfile, getUserProfile, updateUserProfile, logout, sendOtp, verifyOtp } = require('./users.controller');
+const { userLoginOrRegister, completeProfile, getUserProfile, updateUserProfile, logout, sendOtp, verifyOtp, getAllUsers, getUserById } = require('./users.controller');
 const auth = require('../middleware/auth');
-const { userLoginValidation, profileValidation, passwordUpdateValidation } = require('../middleware/validation');
+const { userLoginValidation, profileValidation, updateProfileValidation, passwordUpdateValidation } = require('../middleware/validation');
 const { validationResult } = require('express-validator');
 
 function validate(req, res, next) {
@@ -17,7 +17,7 @@ function validate(req, res, next) {
  * @swagger
  * /users/login:
  *   post:
- *     summary: User login or register
+ *     summary: Send OTP for user login or register
  *     tags: [User]
  *     requestBody:
  *       required: true
@@ -28,24 +28,32 @@ function validate(req, res, next) {
  *             properties:
  *               phone:
  *                 type: string
- *               password:
- *                 type: string
+ *                 example: '+1234567890'
  *     responses:
  *       200:
- *         description: JWT token and profile status
+ *         description: OTP sent successfully
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
- *                 token:
- *                   type: string
- *                 isProfileCompleted:
+ *                 status:
  *                   type: boolean
- *                 user:
+ *                 message:
+ *                   type: string
+ *                 data:
  *                   type: object
+ *                   properties:
+ *                     otp:
+ *                       type: string
+ *                       description: OTP (only in dev mode)
+ *                     message:
+ *                       type: string
+ *                       description: Additional message (only in dev mode)
  *       400:
- *         description: Invalid credentials
+ *         description: Phone number is required
+ *       429:
+ *         description: Too many requests, please wait
  */
 router.post('/login', userLoginValidation, validate, userLoginOrRegister);
 
@@ -53,7 +61,7 @@ router.post('/login', userLoginValidation, validate, userLoginOrRegister);
  * @swagger
  * /users/complete-profile:
  *   post:
- *     summary: Complete user profile
+ *     summary: Complete user profile with name
  *     tags: [User]
  *     security:
  *       - bearerAuth: []
@@ -63,16 +71,43 @@ router.post('/login', userLoginValidation, validate, userLoginOrRegister);
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - name
  *             properties:
  *               name:
  *                 type: string
- *               email:
- *                 type: string
+ *                 description: User's name (required)
+ *                 example: "John Doe"
  *     responses:
  *       200:
- *         description: Profile completed
+ *         description: Profile completed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                         phone:
+ *                           type: string
+ *                         name:
+ *                           type: string
+ *                         isProfileCompleted:
+ *                           type: boolean
  *       400:
- *         description: Name and email are required
+ *         description: Validation error
+ *       404:
+ *         description: User not found
  */
 router.post('/complete-profile', auth, profileValidation, validate, completeProfile);
 
@@ -86,7 +121,53 @@ router.post('/complete-profile', auth, profileValidation, validate, completeProf
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: User profile
+ *         description: User profile retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                         phone:
+ *                           type: string
+ *                         name:
+ *                           type: string
+ *                         email:
+ *                           type: string
+ *                         interests:
+ *                           type: array
+ *                           items:
+ *                             type: object
+ *                             properties:
+ *                               _id:
+ *                                 type: string
+ *                               title:
+ *                                 type: string
+ *                               slug:
+ *                                 type: string
+ *                         profilePhoto:
+ *                           type: string
+ *                         logo:
+ *                           type: string
+ *                         isProfileCompleted:
+ *                           type: boolean
+ *                         createdAt:
+ *                           type: string
+ *                           format: date-time
+ *                         updatedAt:
+ *                           type: string
+ *                           format: date-time
  *       404:
  *         description: User not found
  */
@@ -96,7 +177,7 @@ router.get('/profile', auth, getUserProfile);
  * @swagger
  * /users/profile:
  *   put:
- *     summary: Update user profile
+ *     summary: Update user profile (all fields optional)
  *     tags: [User]
  *     security:
  *       - bearerAuth: []
@@ -109,17 +190,89 @@ router.get('/profile', auth, getUserProfile);
  *             properties:
  *               name:
  *                 type: string
+ *                 description: User's name (optional)
+ *                 example: "John Doe Updated"
  *               email:
  *                 type: string
+ *                 format: email
+ *                 description: User's email (optional)
+ *                 example: "john.updated@example.com"
  *               password:
  *                 type: string
+ *                 description: User's password (optional)
+ *                 example: "newpassword123"
+ *               interests:
+ *                 type: array
+ *                 description: Array of category IDs for user interests (optional)
+ *                 items:
+ *                   type: string
+ *                   format: mongoId
+ *                 example: ["64f8a1b2c3d4e5f6a7b8c9d0", "64f8a1b2c3d4e5f6a7b8c9d1"]
+ *               profilePhoto:
+ *                 type: string
+ *                 format: uri
+ *                 description: URL to user's profile photo (optional)
+ *                 example: "https://example.com/profile.jpg"
+ *               logo:
+ *                 type: string
+ *                 format: uri
+ *                 description: URL to user's logo (optional)
+ *                 example: "https://example.com/logo.png"
  *     responses:
  *       200:
  *         description: User profile updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                         phone:
+ *                           type: string
+ *                         name:
+ *                           type: string
+ *                         email:
+ *                           type: string
+ *                         interests:
+ *                           type: array
+ *                           items:
+ *                             type: object
+ *                             properties:
+ *                               _id:
+ *                                 type: string
+ *                               title:
+ *                                 type: string
+ *                               slug:
+ *                                 type: string
+ *                         profilePhoto:
+ *                           type: string
+ *                         logo:
+ *                           type: string
+ *                         isProfileCompleted:
+ *                           type: boolean
+ *                         createdAt:
+ *                           type: string
+ *                           format: date-time
+ *                         updatedAt:
+ *                           type: string
+ *                           format: date-time
+ *       400:
+ *         description: Validation error or no data provided
  *       404:
  *         description: User not found
  */
-router.put('/profile', auth, updateUserProfile);
+router.put('/profile', auth, updateProfileValidation, validate, updateUserProfile);
 
 /**
  * @swagger
@@ -167,6 +320,9 @@ router.post('/logout', logout);
  *                     otp:
  *                       type: string
  *                       description: OTP (only in dev mode)
+ *                     message:
+ *                       type: string
+ *                       description: Additional message (only in dev mode)
  *       400:
  *         description: Phone is required
  */
@@ -215,11 +371,106 @@ router.post('/send-otp', sendOtp);
  *                           type: string
  *                         phone:
  *                           type: string
+ *                         name:
+ *                           type: string
+ *                         email:
+ *                           type: string
+ *                         interests:
+ *                           type: array
+ *                           items:
+ *                             type: object
+ *                             properties:
+ *                               _id:
+ *                                 type: string
+ *                               title:
+ *                                 type: string
+ *                               slug:
+ *                                 type: string
+ *                         profilePhoto:
+ *                           type: string
+ *                         logo:
+ *                           type: string
  *                         isProfileCompleted:
  *                           type: boolean
+ *                         createdAt:
+ *                           type: string
+ *                           format: date-time
+ *                         updatedAt:
+ *                           type: string
+ *                           format: date-time
  *       400:
  *         description: Invalid or expired OTP
  */
 router.post('/verify-otp', verifyOtp);
+
+/**
+ * @swagger
+ * /users/all:
+ *   get:
+ *     summary: Get all users (Admin only)
+ *     tags: [User]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of all users
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     users:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           phone:
+ *                             type: string
+ *                           name:
+ *                             type: string
+ *                           email:
+ *                             type: string
+ *                           interests:
+ *                             type: array
+ *                             items:
+ *                               type: object
+ *                               properties:
+ *                                 _id:
+ *                                   type: string
+ *                                 title:
+ *                                   type: string
+ *                                 slug:
+ *                                   type: string
+ *                           profilePhoto:
+ *                             type: string
+ *                           logo:
+ *                             type: string
+ *                           isProfileCompleted:
+ *                             type: boolean
+ *                           createdAt:
+ *                             type: string
+ *                             format: date-time
+ *                           updatedAt:
+ *                             type: string
+ *                             format: date-time
+ *                     total:
+ *                       type: number
+ *       401:
+ *         description: Unauthorized
+ */
+router.get('/all', auth, getAllUsers);
+
+module.exports = router;
+
+
 
 module.exports = router; 

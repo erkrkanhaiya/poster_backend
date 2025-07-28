@@ -102,6 +102,28 @@ exports.logout = (req, res) => {
   res.json({ status: true, message: 'Logged out successfully', data: {} });
 };
 
+// Get all categories (for user interest selection)
+exports.getCategories = async (req, res) => {
+  try {
+    const categories = await Category.find({ 
+      isSuspended: false, 
+      isDeleted: false 
+    }).select('title slug images').sort({ title: 1 });
+    
+    res.json({ 
+      status: true, 
+      message: 'Categories fetched successfully', 
+      data: { 
+        categories,
+        total: categories.length
+      } 
+    });
+  } catch (err) {
+    console.error('Error in getCategories:', err);
+    res.status(500).json({ status: false, message: 'Server error', data: {} });
+  }
+};
+
 exports.createCategory = async (req, res) => {
   try {
     const { title, slug, isSuspended, isDeleted, images } = req.body;
