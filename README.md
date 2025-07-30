@@ -25,7 +25,7 @@
   - Returns: `{ token: "JWT_TOKEN" }`
 
 ### User Login
-- **POST** `/users/login`
+- **POST** `/user/login`
   - Body: `{ "email": "user@example.com", "password": "yourpassword" }`
   - Returns: `{ token: "JWT_TOKEN" }`
 

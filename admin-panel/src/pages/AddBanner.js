@@ -4,6 +4,9 @@ import { apiGet } from '../api';
 import DeleteIcon from '@mui/icons-material/Close';
 import axios from 'axios';
 
+const API_URL = `${process.env.REACT_APP_FRONTEND_IP}/admin/category`;
+
+
 const AddBanner = () => {
   const [title, setTitle] = useState('');
   const [images, setImages] = useState([]); // File objects
@@ -23,7 +26,7 @@ const AddBanner = () => {
 
   const fetchCategories = async () => {
     try {
-      const res = await apiGet('/admin/category');
+      const res = await apiGet(API_URL);
       const data = res.data;
       if (data.status) setCategories(data.data.categories || []);
     } catch {}
@@ -58,7 +61,7 @@ const AddBanner = () => {
     images.forEach(img => formData.append('images', img));
     try {
       const token = localStorage.getItem('adminToken');
-      await axios.post('http://localhost:4000/admin/banner', formData, {
+      await axios.post(`${process.env.REACT_APP_FRONTEND_IP}/admin/banner`, formData, {
         headers: { Authorization: `Bearer ${token}` },
         onUploadProgress: (progressEvent) => {
           const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
@@ -83,7 +86,7 @@ const AddBanner = () => {
     setCatLoading(true);
     try {
       const token = localStorage.getItem('adminToken');
-      const res = await fetch('http://localhost:4000/admin/category', {
+      const res = await fetch(API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

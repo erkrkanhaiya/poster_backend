@@ -3,7 +3,7 @@ import { Box, Button, TextField, Typography, Paper, Table, TableBody, TableCell,
 import { Edit, Delete, Logout } from '@mui/icons-material';
 import { apiGet, apiPost, apiPut, apiDelete } from '../api';
 
-const API_URL = '/admin/category';
+const API_URL = `${process.env.REACT_APP_FRONTEND_IP}/admin/category`;
 
 const Category = () => {
   const [categories, setCategories] = useState([]);

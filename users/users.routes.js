@@ -15,7 +15,7 @@ function validate(req, res, next) {
 
 /**
  * @swagger
- * /users/login:
+ * /api/v1/user/login:
  *   post:
  *     summary: Send OTP for user login or register
  *     tags: [User]
@@ -59,7 +59,7 @@ router.post('/login', userLoginValidation, validate, userLoginOrRegister);
 
 /**
  * @swagger
- * /users/complete-profile:
+ * /api/v1/user/complete-profile:
  *   post:
  *     summary: Complete user profile with name
  *     tags: [User]
@@ -113,7 +113,7 @@ router.post('/complete-profile', auth, profileValidation, validate, completeProf
 
 /**
  * @swagger
- * /users/profile:
+ * /api/v1/user/profile:
  *   get:
  *     summary: Get user profile
  *     tags: [User]
@@ -175,7 +175,7 @@ router.get('/profile', auth, getUserProfile);
 
 /**
  * @swagger
- * /users/profile:
+ /api/v1/user/profile:
  *   put:
  *     summary: Update user profile (all fields optional)
  *     tags: [User]
@@ -276,7 +276,7 @@ router.put('/profile', auth, updateProfileValidation, validate, updateUserProfil
 
 /**
  * @swagger
- * /users/logout:
+ * /api/v1/user/logout:
  *   post:
  *     summary: User logout
  *     tags: [User]
@@ -288,7 +288,7 @@ router.post('/logout', logout);
 
 /**
  * @swagger
- * /users/send-otp:
+ * /api/v1/user/send-otp:
  *   post:
  *     summary: Send OTP to user's phone
  *     tags: [User]
@@ -330,7 +330,7 @@ router.post('/send-otp', sendOtp);
 
 /**
  * @swagger
- * /users/verify-otp:
+ * /api/v1/user/verify-otp:
  *   post:
  *     summary: Verify OTP and login/register user
  *     tags: [User]
@@ -405,7 +405,7 @@ router.post('/verify-otp', verifyOtp);
 
 /**
  * @swagger
- * /users/all:
+ * /api/v1/user/all:
  *   get:
  *     summary: Get all users (Admin only)
  *     tags: [User]

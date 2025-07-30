@@ -3,9 +3,9 @@ const OTP = require('../common/otp.model');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
-// OTP DEV/PROD MODE: Set DEV_OTP_BYPASS=true in .env to always use 123456 as OTP for dev/testing.
-// In production, set DEV_OTP_BYPASS=false or remove it.
-const DEV_OTP_BYPASS = process.env.DEV_OTP_BYPASS === 'true';
+// OTP DEV/PROD MODE: Set DEV_BYPASS=true in .env to always use 123456 as OTP for dev/testing.
+// In production, set DEV_BYPASS=false or remove it.
+const DEV_BYPASS = process.env.DEV_BYPASS === 'true';
 
 exports.userLoginOrRegister = async (req, res) => {
   const { phone } = req.body;
@@ -16,7 +16,7 @@ exports.userLoginOrRegister = async (req, res) => {
 
   try {
     // Generate OTP
-    const otp = DEV_OTP_BYPASS ? '1234' : Math.floor(100000 + Math.random() * 9000).toString();
+    const otp = DEV_BYPASS ? '1234' : Math.floor(100000 + Math.random() * 9000).toString();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes from now
 
     // Delete any existing unused OTPs for this phone
@@ -31,7 +31,7 @@ exports.userLoginOrRegister = async (req, res) => {
     await otpRecord.save();
 
     // In development mode, return OTP in response
-    if (DEV_OTP_BYPASS) {
+    if (DEV_BYPASS) {
       return res.json({ 
         status: true, 
         message: 'OTP sent successfully', 
@@ -190,7 +190,7 @@ exports.sendOtp = async (req, res) => {
     }
 
     // Generate OTP
-    const otp = DEV_OTP_BYPASS ? '123456' : Math.floor(100000 + Math.random() * 900000).toString();
+    const otp = DEV_BYPASS ? '123456' : Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes from now
 
     // Delete any existing unused OTPs for this phone
@@ -205,7 +205,7 @@ exports.sendOtp = async (req, res) => {
     await otpRecord.save();
 
     // In development mode, return OTP in response
-    if (DEV_OTP_BYPASS) {
+    if (DEV_BYPASS) {
       return res.json({ 
         status: true, 
         message: 'OTP sent successfully', 
@@ -251,7 +251,7 @@ exports.verifyOtp = async (req, res) => {
     }
 
     // Check if OTP matches (with special handling for dev mode)
-    const isValidOtp = DEV_OTP_BYPASS ? (otp === '1234' || otp === otpRecord.otp) : (otp === otpRecord.otp);
+    const isValidOtp = DEV_BYPASS ? (otp === '1234' || otp === otpRecord.otp) : (otp === otpRecord.otp);
     
     if (!isValidOtp) {
       // Increment attempts
