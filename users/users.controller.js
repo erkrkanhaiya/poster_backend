@@ -77,6 +77,16 @@ exports.completeProfile = async (req, res) => {
       
       if (!user) return res.status(404).json({ status: false, message: 'User not found', data: {} });
     } else if (phone) {
+      // Check if phone number already exists before creating new user
+      const existingUser = await User.findOne({ phone });
+      if (existingUser) {
+        return res.status(409).json({ 
+          status: false, 
+          message: 'Phone number already registered. Please login with this number.', 
+          data: {} 
+        });
+      }
+      
       // New user - create new record
       user = new User({ 
         phone, 

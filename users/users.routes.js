@@ -110,9 +110,11 @@ router.post('/login', userLoginValidation, validate, userLoginOrRegister);
  *                         isProfileCompleted:
  *                           type: boolean
  *       400:
- *         description: Validation error
+ *         description: Validation error or phone number required for new users
  *       404:
  *         description: User not found
+ *       409:
+ *         description: Phone number already registered
  */
 router.post('/complete-profile', profileValidation, validate, completeProfile);
 
