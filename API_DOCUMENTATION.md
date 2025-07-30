@@ -19,13 +19,13 @@ JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
 PORT=4000
 
 # OTP Configuration
-DEV_OTP_BYPASS=true
+DEV_BYPASS=true
 ```
 
 ### API Endpoints
 
 #### 1. Send OTP (Login/Register)
-**POST** `/users/login`
+**POST** `/user/login`
 
 Sends OTP to the provided phone number for authentication.
 
@@ -58,9 +58,9 @@ Sends OTP to the provided phone number for authentication.
 ```
 
 #### 2. Send OTP (Alternative Endpoint)
-**POST** `/users/send-otp`
+**POST** `/user/send-otp`
 
-Same functionality as `/users/login` but with rate limiting (1 minute between requests).
+Same functionality as `/user/login` but with rate limiting (1 minute between requests).
 
 **Request Body:**
 ```json
@@ -72,7 +72,7 @@ Same functionality as `/users/login` but with rate limiting (1 minute between re
 **Response:** Same as above
 
 #### 3. Verify OTP
-**POST** `/users/verify-otp`
+**POST** `/user/verify-otp`
 
 Verifies the OTP and creates/logs in the user.
 
@@ -105,7 +105,7 @@ Verifies the OTP and creates/logs in the user.
 ```
 
 #### 4. Complete Profile
-**POST** `/users/complete-profile`
+**POST** `/user/complete-profile`
 
 Completes the user profile with name (required field).
 
@@ -139,7 +139,7 @@ Authorization: Bearer <jwt_token>
 ```
 
 #### 5. Get User Profile
-**GET** `/users/profile`
+**GET** `/user/profile`
 
 Gets the current user's profile.
 
@@ -166,7 +166,7 @@ Authorization: Bearer <jwt_token>
 ```
 
 #### 6. Update User Profile
-**PUT** `/users/profile`
+**PUT** `/user/profile`
 
 Updates the user's profile information. All fields are optional - only provided fields will be updated.
 
@@ -225,10 +225,10 @@ Authorization: Bearer <jwt_token>
 }
 ```
 
-#### 7. Get All Users (Admin Only)
-**GET** `/users/all`
+#### 7. Get All User (Admin Only)
+**GET** `/user/all`
 
-Gets all users in the system (requires authentication).
+Gets all user in the system (requires authentication).
 
 **Headers:**
 ```
@@ -258,7 +258,7 @@ Authorization: Bearer <jwt_token>
 ```
 
 #### 8. Get User by ID (Admin Only)
-**GET** `/users/:id`
+**GET** `/user/:id`
 
 Gets a specific user by ID (requires authentication).
 
@@ -296,7 +296,7 @@ Authorization: Bearer <jwt_token>
 ```
 
 #### 9. Get Categories for Interest Selection
-**GET** `/users/categories`
+**GET** `/user/categories`
 
 Gets all available categories for user interest selection (public endpoint).
 
@@ -326,7 +326,7 @@ Gets all available categories for user interest selection (public endpoint).
 ```
 
 #### 10. Logout
-**POST** `/users/logout`
+**POST** `/user/logout`
 
 Logs out the user (client-side token deletion).
 
@@ -342,17 +342,17 @@ Logs out the user (client-side token deletion).
 ### OTP System Features
 
 1. **Database Storage**: OTPs are stored in MongoDB with automatic expiration
-2. **Rate Limiting**: Users can only request OTP once per minute
+2. **Rate Limiting**: User can only request OTP once per minute
 3. **Attempt Tracking**: Failed OTP attempts are tracked (max 3 attempts)
-4. **Development Mode**: Set `DEV_OTP_BYPASS=true` to always use "123456" as OTP
+4. **Development Mode**: Set `DEV_BYPASS=true` to always use "123456" as OTP
 5. **Automatic Cleanup**: Expired OTPs are automatically deleted from the database
 
 ### Profile Update Features
 
 1. **Optional Fields**: All profile fields are optional - only provided fields will be updated
-2. **Partial Updates**: Users can update any combination of fields
+2. **Partial Updates**: User can update any combination of fields
 3. **Field Validation**: Provided fields are validated before update
-4. **Empty Values**: Users can set fields to empty strings or null values
+4. **Empty Values**: User can set fields to empty strings or null values
 5. **Array Handling**: Interests can be updated to empty array to clear all interests
 
 ### Error Responses
@@ -435,12 +435,12 @@ Logs out the user (client-side token deletion).
 ### Testing the API
 
 1. **Start the server**: `npm run start:backend`
-2. **Send OTP**: Use `/users/login` or `/users/send-otp` with a phone number
-3. **Verify OTP**: Use `/users/verify-otp` with the phone and OTP
+2. **Send OTP**: Use `/user/login` or `/user/send-otp` with a phone number
+3. **Verify OTP**: Use `/user/verify-otp` with the phone and OTP
 4. **Complete Profile**: Use the returned JWT token to complete the profile
 5. **Access Protected Routes**: Use the JWT token in the Authorization header
 
 ### Development vs Production
 
-- **Development**: Set `DEV_OTP_BYPASS=true` to always use "123456" as OTP
-- **Production**: Set `DEV_OTP_BYPASS=false` and implement SMS service integration 
+- **Development**: Set `DEV_BYPASS=true` to always use "123456" as OTP
+- **Production**: Set `DEV_BYPASS=false` and implement SMS service integration 
