@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Checkout</title>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 16px;
+        }
+
+        .plan-details {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+
+        .plan-name {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .plan-description {
+            color: #666;
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+
+        .plan-price {
+            font-size: 32px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .plan-features {
+            list-style: none;
+        }
+
+        .plan-features li {
+            padding: 8px 0;
+            color: #555;
+            position: relative;
+            padding-left: 25px;
+        }
+
+        .plan-features li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .payment-button {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .payment-button:hover {
+            transform: translateY(-2px);
+        }
+
+        .payment-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Complete Your Purchase</h1>
+            <p>Choose your preferred payment method</p>
+        </div>
+
+        <div class="error" id="errorMessage"></div>
+        <div class="success" id="successMessage"></div>
+
+        <div class="plan-details" id="planDetails">
+            <div class="plan-name" id="planName">Loading...</div>
+            <div class="plan-description" id="planDescription"></div>
+            <div class="plan-price" id="planPrice"></div>
+            <ul class="plan-features" id="planFeatures"></ul>
+        </div>
+
+        <button class="payment-button" id="payButton" onclick="initiatePayment()">
+            Pay Now
+        </button>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Processing payment...</p>
+        </div>
+    </div>
+
+    <script>
+        let currentOrder = null;
+
+        // Get payment details from URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const orderId = urlParams.get('orderId');
+        const amount = urlParams.get('amount');
+        const currency = urlParams.get('currency') || 'INR';
+        const transactionId = urlParams.get('transactionId');
+        const token = urlParams.get('token');
+
+        if (!orderId || !amount || !transactionId || !token) {
+            showError('Invalid request. Missing required parameters.');
+            document.getElementById('payButton').disabled = true;
+        } else {
+            displayPaymentDetails();
+        }
+
+        function displayPaymentDetails() {
+            document.getElementById('planName').textContent = 'Payment';
+            document.getElementById('planDescription').textContent = 'Complete your payment securely';
+            document.getElementById('planPrice').textContent = `₹${(parseInt(amount) / 100).toFixed(2)}`;
+            
+            const featuresList = document.getElementById('planFeatures');
+            featuresList.innerHTML = '';
+            
+            const features = [
+                'Secure payment processing',
+                'Instant confirmation',
+                'Multiple payment options'
+            ];
+            
+            features.forEach(feature => {
+                const li = document.createElement('li');
+                li.textContent = feature;
+                featuresList.appendChild(li);
+            });
+        }
+
+        async function initiatePayment() {
+            try {
+                showLoading(true);
+
+                // Initialize Razorpay with existing order
+                const options = {
+                    key: 'YOUR_RAZORPAY_KEY_ID', // Replace with your actual key
+                    amount: amount,
+                    currency: currency,
+                    name: 'Your Company Name',
+                    description: 'Payment',
+                    order_id: orderId,
+                    handler: function (response) {
+                        verifyPayment(response);
+                    },
+                    prefill: {
+                        name: 'User Name', // You can get this from user data
+                        email: 'user@example.com',
+                        contact: '9999999999'
+                    },
+                    notes: {
+                        transactionId: transactionId
+                    },
+                    theme: {
+                        color: '#667eea'
+                    }
+                };
+
+                const rzp = new Razorpay(options);
+                rzp.open();
+
+            } catch (error) {
+                showError(error.message || 'Failed to initialize payment.');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function verifyPayment(response) {
+            try {
+                showLoading(true);
+
+                const verifyResponse = await fetch('/users/payment/verify', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        razorpay_order_id: response.razorpay_order_id,
+                        razorpay_payment_id: response.razorpay_payment_id,
+                        razorpay_signature: response.razorpay_signature,
+                        transactionId: transactionId
+                    })
+                });
+
+                const verifyData = await verifyResponse.json();
+
+                if (verifyData.status) {
+                    showSuccess('Payment successful! Your transaction is now complete.');
+                    document.getElementById('payButton').disabled = true;
+                    
+                    // Redirect to success page after 3 seconds
+                    setTimeout(() => {
+                        window.location.href = `/success.html?transactionId=${transactionId}&amount=${amount}&description=Payment`;
+                    }, 3000);
+                } else {
+                    showError(verifyData.message || 'Payment verification failed.');
+                }
+
+            } catch (error) {
+                showError('Payment verification failed. Please contact support.');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+            document.getElementById('payButton').disabled = show;
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            document.getElementById('successMessage').style.display = 'none';
+        }
+
+        function showSuccess(message) {
+            const successDiv = document.getElementById('successMessage');
+            successDiv.textContent = message;
+            successDiv.style.display = 'block';
+            document.getElementById('errorMessage').style.display = 'none';
+        }
+    </script>
+</body>
+</html> 

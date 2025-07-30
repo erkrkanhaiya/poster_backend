@@ -284,7 +284,7 @@ exports.verifyOtp = async (req, res) => {
     }
 
     // Generate JWT token
-    const token = jwt.sign({ id: user._id, role: 'user' }, process.env.JWT_SECRET, { expiresIn: '1d' });
+            const token = jwt.sign({ id: user._id, role: 'user' }, process.env.JWT_SECRET, { expiresIn: '30d' });
 
     // Return user data
     res.json({ 
@@ -309,6 +309,40 @@ exports.verifyOtp = async (req, res) => {
 
   } catch (err) {
     console.error('Error in verifyOtp:', err);
+    res.status(500).json({ status: false, message: 'Server error', data: {} });
+  }
+};
+
+// Refresh token
+exports.refreshToken = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    // Find user
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ status: false, message: 'User not found', data: {} });
+    }
+
+    // Generate new token
+    const token = jwt.sign({ id: user._id, role: 'user' }, process.env.JWT_SECRET, { expiresIn: '30d' });
+
+    res.json({ 
+      status: true, 
+      message: 'Token refreshed successfully', 
+      data: { 
+        token,
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+          isProfileCompleted: user.isProfileCompleted
+        }
+      } 
+    });
+  } catch (err) {
+    console.error('Error in refreshToken:', err);
     res.status(500).json({ status: false, message: 'Server error', data: {} });
   }
 }; 

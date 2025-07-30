@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { adminLogin, getAdminProfile, updateAdminProfile, logout, createCategory, getCategories, getCategoryById, updateCategory, deleteCategory, createAdmin, getBanners, getBannerById, createBanner, updateBanner, deleteBanner, uploadBannerImages } = require('./admin.controller');
+const { adminLogin, getAdminProfile, updateAdminProfile, logout, createCategory, getCategories, getCategoryById, updateCategory, deleteCategory, createAdmin, getBanners, getBannerById, createBanner, updateBanner, deleteBanner, uploadBannerImages, refreshToken } = require('./admin.controller');
 const adminAuth = require('../middleware/adminAuth');
 const { adminLoginValidation, profileValidation, passwordUpdateValidation } = require('../middleware/validation');
 const { validationResult } = require('express-validator');
@@ -411,5 +411,46 @@ router.delete('/banner/:bannerId/image', adminAuth, require('./admin.controller'
  */
 router.post('/create-admin', createAdmin);
 
+/**
+ * @swagger
+ * /admin/refresh-token:
+ *   post:
+ *     summary: Refresh JWT token
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Token refreshed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     token:
+ *                       type: string
+ *                       description: New JWT token (valid for 30 days)
+ *                     admin:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                         name:
+ *                           type: string
+ *                         email:
+ *                           type: string
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Admin not found
+ */
+router.post('/refresh-token', adminAuth, refreshToken);
 
 module.exports = router; 

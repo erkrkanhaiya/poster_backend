@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { userLoginOrRegister, completeProfile, getUserProfile, updateUserProfile, logout, sendOtp, verifyOtp, getAllUsers, getUserById } = require('./users.controller');
+const { userLoginOrRegister, completeProfile, getUserProfile, updateUserProfile, logout, sendOtp, verifyOtp, getAllUsers, getUserById, refreshToken } = require('./users.controller');
 const auth = require('../middleware/auth');
 const { userLoginValidation, profileValidation, updateProfileValidation, passwordUpdateValidation } = require('../middleware/validation');
 const { validationResult } = require('express-validator');
@@ -469,8 +469,50 @@ router.post('/verify-otp', verifyOtp);
  */
 router.get('/all', auth, getAllUsers);
 
-module.exports = router;
-
-
+/**
+ * @swagger
+ * /users/refresh-token:
+ *   post:
+ *     summary: Refresh JWT token
+ *     tags: [User]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Token refreshed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     token:
+ *                       type: string
+ *                       description: New JWT token (valid for 30 days)
+ *                     user:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                         name:
+ *                           type: string
+ *                         email:
+ *                           type: string
+ *                         phone:
+ *                           type: string
+ *                         isProfileCompleted:
+ *                           type: boolean
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: User not found
+ */
+router.post('/refresh-token', auth, refreshToken);
 
 module.exports = router; 

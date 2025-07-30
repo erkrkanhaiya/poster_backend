@@ -64,10 +64,38 @@ exports.adminLogin = async (req, res) => {
     if (!isMatch) {
       return res.status(400).json({ status: false, message: 'Invalid credentials', data: {} });
     }
-    const token = jwt.sign({ id: admin._id, role: 'admin' }, process.env.JWT_SECRET, { expiresIn: '1d' });
+            const token = jwt.sign({ id: admin._id, role: 'admin' }, process.env.JWT_SECRET, { expiresIn: '30d' });
     const adminProfile = await Admin.findById(admin._id).select('-password');
     res.json({ status: true, message: 'Login successful', data: { token, admin: adminProfile } });
   } catch (err) {
+    res.status(500).json({ status: false, message: 'Server error', data: {} });
+  }
+};
+
+// Refresh admin token
+exports.refreshToken = async (req, res) => {
+  try {
+    const adminId = req.admin.id;
+    
+    // Find admin
+    const admin = await Admin.findById(adminId).select('-password');
+    if (!admin) {
+      return res.status(404).json({ status: false, message: 'Admin not found', data: {} });
+    }
+
+    // Generate new token
+    const token = jwt.sign({ id: admin._id, role: 'admin' }, process.env.JWT_SECRET, { expiresIn: '30d' });
+
+    res.json({ 
+      status: true, 
+      message: 'Token refreshed successfully', 
+      data: { 
+        token,
+        admin
+      } 
+    });
+  } catch (err) {
+    console.error('Error in refreshToken:', err);
     res.status(500).json({ status: false, message: 'Server error', data: {} });
   }
 };
