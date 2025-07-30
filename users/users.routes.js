@@ -63,8 +63,6 @@ router.post('/login', userLoginValidation, validate, userLoginOrRegister);
  *   post:
  *     summary: Complete user profile with name
  *     tags: [User]
- *     security:
- *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -78,6 +76,10 @@ router.post('/login', userLoginValidation, validate, userLoginOrRegister);
  *                 type: string
  *                 description: User's name (required)
  *                 example: "John Doe"
+ *               phone:
+ *                 type: string
+ *                 description: Phone number (required for new users)
+ *                 example: "+919999999999"
  *     responses:
  *       200:
  *         description: Profile completed successfully
@@ -93,6 +95,9 @@ router.post('/login', userLoginValidation, validate, userLoginOrRegister);
  *                 data:
  *                   type: object
  *                   properties:
+ *                     token:
+ *                       type: string
+ *                       description: "JWT token generated after profile completion"
  *                     user:
  *                       type: object
  *                       properties:
@@ -109,7 +114,7 @@ router.post('/login', userLoginValidation, validate, userLoginOrRegister);
  *       404:
  *         description: User not found
  */
-router.post('/complete-profile', auth, profileValidation, validate, completeProfile);
+router.post('/complete-profile', profileValidation, validate, completeProfile);
 
 /**
  * @swagger
@@ -364,6 +369,11 @@ router.post('/send-otp', sendOtp);
  *                   properties:
  *                     token:
  *                       type: string
+ *                       nullable: true
+ *                       description: "JWT token (null if profile completion required)"
+ *                     requiresProfileCompletion:
+ *                       type: boolean
+ *                       description: "Whether user needs to complete profile"
  *                     user:
  *                       type: object
  *                       properties:

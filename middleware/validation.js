@@ -11,6 +11,7 @@ exports.userLoginValidation = [
 
 exports.profileValidation = [
   body('name').notEmpty().withMessage('Name is required'),
+  body('phone').optional().isMobilePhone().withMessage('Valid phone number is required for new users'),
 ];
 
 exports.updateProfileValidation = [

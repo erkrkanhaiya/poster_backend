@@ -58,21 +58,49 @@ exports.userLoginOrRegister = async (req, res) => {
 };
 
 exports.completeProfile = async (req, res) => {
-  const { name } = req.body;
-  const userId = req.user.id;
+  const { name, phone } = req.body;
   
   try {
-    const user = await User.findByIdAndUpdate(
-      userId, 
-      { 
-        name, 
-        isProfileCompleted: true 
-      }, 
-      { new: true }
-    ).select('-password').populate('interests', 'title slug');
+    let user;
     
-    if (!user) return res.status(404).json({ status: false, message: 'User not found', data: {} });
-    res.json({ status: true, message: 'Profile completed successfully', data: { user } });
+    // Check if user exists (for existing users with incomplete profile)
+    if (req.user && req.user.id) {
+      // Existing user - update profile
+      user = await User.findByIdAndUpdate(
+        req.user.id, 
+        { 
+          name, 
+          isProfileCompleted: true 
+        }, 
+        { new: true }
+      ).select('-password').populate('interests', 'title slug');
+      
+      if (!user) return res.status(404).json({ status: false, message: 'User not found', data: {} });
+    } else if (phone) {
+      // New user - create new record
+      user = new User({ 
+        phone, 
+        name, 
+        isProfileCompleted: true,
+        createdAt: new Date()
+      });
+      await user.save();
+      user = await User.findById(user._id).select('-password').populate('interests', 'title slug');
+    } else {
+      return res.status(400).json({ status: false, message: 'Phone number is required for new users', data: {} });
+    }
+    
+    // Generate JWT token for completed profile
+    const token = jwt.sign({ id: user._id, role: 'user' }, process.env.JWT_SECRET, { expiresIn: '30d' });
+    
+    res.json({ 
+      status: true, 
+      message: 'Profile completed successfully', 
+      data: { 
+        token,
+        user 
+      } 
+    });
   } catch (err) {
     console.error('Error in completeProfile:', err);
     res.status(500).json({ status: false, message: 'Server error', data: {} });
@@ -272,40 +300,70 @@ exports.verifyOtp = async (req, res) => {
     otpRecord.isUsed = true;
     await otpRecord.save();
 
-    // Find or create user
-    let user = await User.findOne({ phone });
+    // Find existing user
+    const user = await User.findOne({ phone });
+    
     if (!user) {
-      user = new User({ 
-        phone, 
-        isProfileCompleted: false,
-        createdAt: new Date()
+      // New user - don't create record yet, just verify OTP
+      res.json({ 
+        status: true, 
+        message: 'OTP verified successfully. Please complete your profile.', 
+        data: { 
+          token: null,
+          requiresProfileCompletion: true,
+          isNewUser: true,
+          phone: phone
+        } 
       });
-      await user.save();
+    } else if (!user.isProfileCompleted) {
+      // Existing user with incomplete profile
+      res.json({ 
+        status: true, 
+        message: 'OTP verified successfully. Please complete your profile.', 
+        data: { 
+          token: null,
+          requiresProfileCompletion: true,
+          isNewUser: false,
+          user: {
+            id: user._id,
+            phone: user.phone,
+            name: user.name,
+            email: user.email,
+            interests: user.interests,
+            profilePhoto: user.profilePhoto,
+            logo: user.logo,
+            isProfileCompleted: user.isProfileCompleted,
+            createdAt: user.createdAt,
+            updatedAt: user.updatedAt
+          }
+        } 
+      });
+    } else {
+      // Existing user with complete profile - generate token
+      const token = jwt.sign({ id: user._id, role: 'user' }, process.env.JWT_SECRET, { expiresIn: '30d' });
+      
+      res.json({ 
+        status: true, 
+        message: 'OTP verified successfully', 
+        data: { 
+          token, 
+          requiresProfileCompletion: false,
+          isNewUser: false,
+          user: {
+            id: user._id,
+            phone: user.phone,
+            name: user.name,
+            email: user.email,
+            interests: user.interests,
+            profilePhoto: user.profilePhoto,
+            logo: user.logo,
+            isProfileCompleted: user.isProfileCompleted,
+            createdAt: user.createdAt,
+            updatedAt: user.updatedAt
+          }
+        } 
+      });
     }
-
-    // Generate JWT token
-            const token = jwt.sign({ id: user._id, role: 'user' }, process.env.JWT_SECRET, { expiresIn: '30d' });
-
-    // Return user data
-    res.json({ 
-      status: true, 
-      message: 'OTP verified successfully', 
-      data: { 
-        token, 
-        user: {
-          id: user._id,
-          phone: user.phone,
-          name: user.name,
-          email: user.email,
-          interests: user.interests,
-          profilePhoto: user.profilePhoto,
-          logo: user.logo,
-          isProfileCompleted: user.isProfileCompleted,
-          createdAt: user.createdAt,
-          updatedAt: user.updatedAt
-        }
-      } 
-    });
 
   } catch (err) {
     console.error('Error in verifyOtp:', err);
