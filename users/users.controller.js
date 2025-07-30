@@ -5,7 +5,7 @@ const jwt = require('jsonwebtoken');
 
 // OTP DEV/PROD MODE: Set DEV_BYPASS=true in .env to always use 123456 as OTP for dev/testing.
 // In production, set DEV_BYPASS=false or remove it.
-const DEV_BYPASS = process.env.DEV_BYPASS === 'true';
+const DEV_BYPASS = process.env.DEV_OTP_BYPASS === 'true';
 
 exports.userLoginOrRegister = async (req, res) => {
   const { phone } = req.body;
@@ -218,7 +218,7 @@ exports.sendOtp = async (req, res) => {
     }
 
     // Generate OTP
-    const otp = DEV_BYPASS ? '123456' : Math.floor(100000 + Math.random() * 900000).toString();
+    const otp = process.env.DEV_OTP_BYPASS === 'true' ? '1234' : Math.floor(100000 + Math.random() * 9000).toString();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes from now
 
     // Delete any existing unused OTPs for this phone
