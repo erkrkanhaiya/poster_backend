@@ -413,4 +413,76 @@ exports.refreshToken = async (req, res) => {
     console.error('Error in refreshToken:', err);
     res.status(500).json({ status: false, message: 'Server error', data: {} });
   }
+};
+
+// Change password
+exports.changePassword = async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ 
+      status: false, 
+      message: 'Current password and new password are required', 
+      data: {} 
+    });
+  }
+
+  if (newPassword.length < 6) {
+    return res.status(400).json({ 
+      status: false, 
+      message: 'New password must be at least 6 characters long', 
+      data: {} 
+    });
+  }
+
+  try {
+    // Find user with password
+    const user = await User.findById(req.user.id).select('+password');
+    if (!user) {
+      return res.status(404).json({ status: false, message: 'User not found', data: {} });
+    }
+
+    // Check if user has a password set (for users who registered without password)
+    if (!user.password) {
+      return res.status(400).json({ 
+        status: false, 
+        message: 'No password set for this account. Please set a password first.', 
+        data: {} 
+      });
+    }
+
+    // Verify current password
+    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isCurrentPasswordValid) {
+      return res.status(400).json({ 
+        status: false, 
+        message: 'Current password is incorrect', 
+        data: {} 
+      });
+    }
+
+    // Check if new password is same as current password
+    const isNewPasswordSame = await bcrypt.compare(newPassword, user.password);
+    if (isNewPasswordSame) {
+      return res.status(400).json({ 
+        status: false, 
+        message: 'New password must be different from current password', 
+        data: {} 
+      });
+    }
+
+    // Hash new password and update
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedNewPassword;
+    await user.save();
+
+    res.json({ 
+      status: true, 
+      message: 'Password changed successfully', 
+      data: {} 
+    });
+  } catch (err) {
+    console.error('Error in changePassword:', err);
+    res.status(500).json({ status: false, message: 'Server error', data: {} });
+  }
 }; 

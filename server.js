@@ -33,10 +33,23 @@ const apiV1Router = express.Router();
 
 apiV1Router.use('/admin', require('./admin/admin.routes'));
 apiV1Router.use('/admin/settings', require('./admin/settings.routes'));
-apiV1Router.use('/user/settings', require('./users/settings.routes'));
-apiV1Router.use('/user/pages', require('./users/page.routes'));
-apiV1Router.use('/user/categories', require('./users/category.routes'));
-apiV1Router.use('/user', require('./users/users.routes'));
+  // apiV1Router.use('/admin/signed-url', require('./admin/signedUrl.routes'));
+  // apiV1Router.use('/admin/upload-url', require('./admin/simpleSignedUrl.routes'));
+apiV1Router.use('/users/settings', require('./users/settings.routes'));
+apiV1Router.use('/users/pages', require('./users/page.routes'));
+apiV1Router.use('/users/categories', require('./users/category.routes'));
+console.log('Loading upload-url routes...');
+apiV1Router.use('/users/upload-url', require('./users/simpleSignedUrl.routes'));
+console.log('Upload-url routes loaded successfully');
+
+apiV1Router.use('/users', require('./users/users.routes'));
+
+
+
+// Test route to verify basic routing
+app.get('/api/v1/test', (req, res) => {
+  res.json({ message: 'Basic routing is working!' });
+});
 
 app.use('/api/v1', apiV1Router);
 
