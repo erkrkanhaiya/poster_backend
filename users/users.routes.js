@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { userLoginOrRegister, completeProfile, getUserProfile, updateUserProfile, logout, sendOtp, verifyOtp, getAllUsers, getUserById, refreshToken } = require('./users.controller');
+const { userLoginOrRegister, completeProfile, getUserProfile, updateUserProfile, logout, sendOtp, verifyOtp, getAllUsers, getUserById, refreshToken, changePassword } = require('./users.controller');
 const auth = require('../middleware/auth');
-const { userLoginValidation, profileValidation, updateProfileValidation, passwordUpdateValidation } = require('../middleware/validation');
+const { userLoginValidation, profileValidation, updateProfileValidation, passwordUpdateValidation, changePasswordValidation } = require('../middleware/validation');
 const { validationResult } = require('express-validator');
 
 function validate(req, res, next) {
@@ -110,9 +110,11 @@ router.post('/login', userLoginValidation, validate, userLoginOrRegister);
  *                         isProfileCompleted:
  *                           type: boolean
  *       400:
- *         description: Validation error
+ *         description: Validation error or phone number required for new users
  *       404:
  *         description: User not found
+ *       409:
+ *         description: Phone number already registered
  */
 router.post('/complete-profile', profileValidation, validate, completeProfile);
 
@@ -290,6 +292,53 @@ router.put('/profile', auth, updateProfileValidation, validate, updateUserProfil
  *         description: Logged out successfully
  */
 router.post('/logout', logout);
+
+/**
+ * @swagger
+ * /api/v1/user/change-password:
+ *   post:
+ *     summary: Change user password
+ *     tags: [User]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - currentPassword
+ *               - newPassword
+ *             properties:
+ *               currentPassword:
+ *                 type: string
+ *                 description: Current password
+ *                 example: "oldpassword123"
+ *               newPassword:
+ *                 type: string
+ *                 description: New password (minimum 6 characters)
+ *                 example: "newpassword123"
+ *     responses:
+ *       200:
+ *         description: Password changed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *             type: object
+ *             properties:
+ *               status:
+ *                 type: boolean
+ *               message:
+ *                 type: string
+ *               data:
+ *                 type: object
+ *       400:
+ *         description: Validation error, current password incorrect, or new password same as current
+ *       404:
+ *         description: User not found
+ */
+router.post('/change-password', auth, changePasswordValidation, validate, changePassword);
 
 /**
  * @swagger
