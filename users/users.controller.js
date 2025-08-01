@@ -9,7 +9,7 @@ const DEV_BYPASS = process.env.DEV_OTP_BYPASS === 'true';
 
 exports.userLoginOrRegister = async (req, res) => {
   const { phone } = req.body;
-  
+
   if (!phone) {
     return res.status(400).json({ status: false, message: 'Phone number is required', data: {} });
   }
@@ -32,23 +32,23 @@ exports.userLoginOrRegister = async (req, res) => {
 
     // In development mode, return OTP in response
     if (DEV_BYPASS) {
-      return res.json({ 
-        status: true, 
-        message: 'OTP sent successfully', 
-        data: { 
+      return res.json({
+        status: true,
+        message: 'OTP sent successfully',
+        data: {
           otp,
           message: 'Use this OTP for verification (development mode)'
-        } 
+        }
       });
     }
 
     // In production, send OTP via SMS (implement your SMS service here)
     console.log(`Sending OTP ${otp} to phone ${phone}`);
-    
-    res.json({ 
-      status: true, 
-      message: 'OTP sent successfully', 
-      data: {} 
+
+    res.json({
+      status: true,
+      message: 'OTP sent successfully',
+      data: {}
     });
 
   } catch (err) {
@@ -59,38 +59,38 @@ exports.userLoginOrRegister = async (req, res) => {
 
 exports.completeProfile = async (req, res) => {
   const { name, phone } = req.body;
-  
+
   try {
     let user;
-    
+
     // Check if user exists (for existing users with incomplete profile)
     if (req.user && req.user.id) {
       // Existing user - update profile
       user = await User.findByIdAndUpdate(
-        req.user.id, 
-        { 
-          name, 
-          isProfileCompleted: true 
-        }, 
+        req.user.id,
+        {
+          name,
+          isProfileCompleted: true
+        },
         { new: true }
       ).select('-password').populate('interests', 'title slug');
-      
+
       if (!user) return res.status(404).json({ status: false, message: 'User not found', data: {} });
     } else if (phone) {
       // Check if phone number already exists before creating new user
       const existingUser = await User.findOne({ phone });
       if (existingUser) {
-        return res.status(409).json({ 
-          status: false, 
-          message: 'Phone number already registered. Please login with this number.', 
-          data: {} 
+        return res.status(409).json({
+          status: false,
+          message: 'Phone number already registered. Please login with this number.',
+          data: {}
         });
       }
-      
+
       // New user - create new record
-      user = new User({ 
-        phone, 
-        name, 
+      user = new User({
+        phone,
+        name,
         isProfileCompleted: true,
         createdAt: new Date()
       });
@@ -99,17 +99,17 @@ exports.completeProfile = async (req, res) => {
     } else {
       return res.status(400).json({ status: false, message: 'Phone number is required for new users', data: {} });
     }
-    
+
     // Generate JWT token for completed profile
     const token = jwt.sign({ id: user._id, role: 'user' }, process.env.JWT_SECRET, { expiresIn: '30d' });
-    
-    res.json({ 
-      status: true, 
-      message: 'Profile completed successfully', 
-      data: { 
+
+    res.json({
+      status: true,
+      message: 'Profile completed successfully',
+      data: {
         token,
-        user 
-      } 
+        user
+      }
     });
   } catch (err) {
     console.error('Error in completeProfile:', err);
@@ -122,8 +122,9 @@ exports.getUserProfile = async (req, res) => {
     const user = await User.findById(req.user.id)
       .select('-password')
       .populate('interests', 'title slug');
-    
+
     if (!user) return res.status(404).json({ status: false, message: 'User not found', data: {} });
+    user.isPremium = false
     res.json({ status: true, message: 'User profile retrieved', data: { user } });
   } catch (err) {
     console.error('Error in getUserProfile:', err);
@@ -135,26 +136,32 @@ exports.updateUserProfile = async (req, res) => {
   const { name, email, password, interests, profilePhoto, logo } = req.body;
   try {
     const updateData = {};
-    
-    // Only update fields that are provided (including empty strings and null values)
+
+    // Only update fields that are provided (including null/empty values to clear fields)
     if (name !== undefined) updateData.name = name;
     if (email !== undefined) updateData.email = email;
-    if (password !== undefined) updateData.password = await bcrypt.hash(password, 10);
+    if (password !== undefined) {
+      if (password && password.trim() !== '') {
+        updateData.password = await bcrypt.hash(password, 10);
+      } else {
+        updateData.password = null; // Clear password
+      }
+    }
     if (interests !== undefined) updateData.interests = interests;
     if (profilePhoto !== undefined) updateData.profilePhoto = profilePhoto;
     if (logo !== undefined) updateData.logo = logo;
-    
+
     // Check if any data was provided for update
     if (Object.keys(updateData).length === 0) {
       return res.status(400).json({ status: false, message: 'No data provided for update', data: {} });
     }
-    
+
     const user = await User.findByIdAndUpdate(
-      req.user.id, 
-      updateData, 
+      req.user.id,
+      updateData,
       { new: true }
     ).select('-password').populate('interests', 'title slug');
-    
+
     if (!user) return res.status(404).json({ status: false, message: 'User not found', data: {} });
     res.json({ status: true, message: 'User profile updated', data: { user } });
   } catch (err) {
@@ -172,13 +179,13 @@ exports.logout = (req, res) => {
 exports.getAllUsers = async (req, res) => {
   try {
     const users = await User.find().select('-password').sort({ createdAt: -1 });
-    res.json({ 
-      status: true, 
-      message: 'Users fetched successfully', 
-      data: { 
+    res.json({
+      status: true,
+      message: 'Users fetched successfully',
+      data: {
         users,
         total: users.length
-      } 
+      }
     });
   } catch (err) {
     console.error('Error in getAllUsers:', err);
@@ -193,10 +200,10 @@ exports.getUserById = async (req, res) => {
     if (!user) {
       return res.status(404).json({ status: false, message: 'User not found', data: {} });
     }
-    res.json({ 
-      status: true, 
-      message: 'User fetched successfully', 
-      data: { user } 
+    res.json({
+      status: true,
+      message: 'User fetched successfully',
+      data: { user }
     });
   } catch (err) {
     console.error('Error in getUserById:', err);
@@ -206,24 +213,24 @@ exports.getUserById = async (req, res) => {
 
 exports.sendOtp = async (req, res) => {
   const { phone } = req.body;
-  
+
   if (!phone) {
     return res.status(400).json({ status: false, message: 'Phone number is required', data: {} });
   }
 
   try {
     // Check if there's a recent OTP request (rate limiting)
-    const recentOtp = await OTP.findOne({ 
-      phone, 
+    const recentOtp = await OTP.findOne({
+      phone,
       isUsed: false,
       createdAt: { $gte: new Date(Date.now() - 60 * 1000) } // Within last 1 minute
     });
 
     if (recentOtp) {
-      return res.status(429).json({ 
-        status: false, 
-        message: 'Please wait 1 minute before requesting another OTP', 
-        data: {} 
+      return res.status(429).json({
+        status: false,
+        message: 'Please wait 1 minute before requesting another OTP',
+        data: {}
       });
     }
 
@@ -244,23 +251,23 @@ exports.sendOtp = async (req, res) => {
 
     // In development mode, return OTP in response
     if (DEV_BYPASS) {
-      return res.json({ 
-        status: true, 
-        message: 'OTP sent successfully', 
-        data: { 
+      return res.json({
+        status: true,
+        message: 'OTP sent successfully',
+        data: {
           otp,
           message: 'Use this OTP for verification (development mode)'
-        } 
+        }
       });
     }
 
     // In production, send OTP via SMS (implement your SMS service here)
     console.log(`Sending OTP ${otp} to phone ${phone}`);
-    
-    res.json({ 
-      status: true, 
-      message: 'OTP sent successfully', 
-      data: {} 
+
+    res.json({
+      status: true,
+      message: 'OTP sent successfully',
+      data: {}
     });
 
   } catch (err) {
@@ -271,15 +278,15 @@ exports.sendOtp = async (req, res) => {
 
 exports.verifyOtp = async (req, res) => {
   const { phone, otp } = req.body;
-  
+
   if (!phone || !otp) {
     return res.status(400).json({ status: false, message: 'Phone and OTP are required', data: {} });
   }
 
   try {
     // Find the OTP record
-    const otpRecord = await OTP.findOne({ 
-      phone, 
+    const otpRecord = await OTP.findOne({
+      phone,
       isUsed: false,
       expiresAt: { $gt: new Date() } // Not expired
     });
@@ -290,7 +297,7 @@ exports.verifyOtp = async (req, res) => {
 
     // Check if OTP matches (with special handling for dev mode)
     const isValidOtp = DEV_BYPASS ? (otp === '1234' || otp === otpRecord.otp) : (otp === otpRecord.otp);
-    
+
     if (!isValidOtp) {
       // Increment attempts
       otpRecord.attempts += 1;
@@ -312,25 +319,25 @@ exports.verifyOtp = async (req, res) => {
 
     // Find existing user
     const user = await User.findOne({ phone });
-    
+
     if (!user) {
       // New user - don't create record yet, just verify OTP
-      res.json({ 
-        status: true, 
-        message: 'OTP verified successfully. Please complete your profile.', 
-        data: { 
+      res.json({
+        status: true,
+        message: 'OTP verified successfully. Please complete your profile.',
+        data: {
           token: null,
           requiresProfileCompletion: true,
           isNewUser: true,
           phone: phone
-        } 
+        }
       });
     } else if (!user.isProfileCompleted) {
       // Existing user with incomplete profile
-      res.json({ 
-        status: true, 
-        message: 'OTP verified successfully. Please complete your profile.', 
-        data: { 
+      res.json({
+        status: true,
+        message: 'OTP verified successfully. Please complete your profile.',
+        data: {
           token: null,
           requiresProfileCompletion: true,
           isNewUser: false,
@@ -346,17 +353,17 @@ exports.verifyOtp = async (req, res) => {
             createdAt: user.createdAt,
             updatedAt: user.updatedAt
           }
-        } 
+        }
       });
     } else {
       // Existing user with complete profile - generate token
       const token = jwt.sign({ id: user._id, role: 'user' }, process.env.JWT_SECRET, { expiresIn: '30d' });
-      
-      res.json({ 
-        status: true, 
-        message: 'OTP verified successfully', 
-        data: { 
-          token, 
+
+      res.json({
+        status: true,
+        message: 'OTP verified successfully',
+        data: {
+          token,
           requiresProfileCompletion: false,
           isNewUser: false,
           user: {
@@ -371,7 +378,7 @@ exports.verifyOtp = async (req, res) => {
             createdAt: user.createdAt,
             updatedAt: user.updatedAt
           }
-        } 
+        }
       });
     }
 
@@ -385,7 +392,7 @@ exports.verifyOtp = async (req, res) => {
 exports.refreshToken = async (req, res) => {
   try {
     const userId = req.user.id;
-    
+
     // Find user
     const user = await User.findById(userId);
     if (!user) {
@@ -395,10 +402,10 @@ exports.refreshToken = async (req, res) => {
     // Generate new token
     const token = jwt.sign({ id: user._id, role: 'user' }, process.env.JWT_SECRET, { expiresIn: '30d' });
 
-    res.json({ 
-      status: true, 
-      message: 'Token refreshed successfully', 
-      data: { 
+    res.json({
+      status: true,
+      message: 'Token refreshed successfully',
+      data: {
         token,
         user: {
           id: user._id,
@@ -407,7 +414,7 @@ exports.refreshToken = async (req, res) => {
           phone: user.phone,
           isProfileCompleted: user.isProfileCompleted
         }
-      } 
+      }
     });
   } catch (err) {
     console.error('Error in refreshToken:', err);
@@ -418,20 +425,20 @@ exports.refreshToken = async (req, res) => {
 // Change password
 exports.changePassword = async (req, res) => {
   const { currentPassword, newPassword } = req.body;
-  
+
   if (!currentPassword || !newPassword) {
-    return res.status(400).json({ 
-      status: false, 
-      message: 'Current password and new password are required', 
-      data: {} 
+    return res.status(400).json({
+      status: false,
+      message: 'Current password and new password are required',
+      data: {}
     });
   }
 
   if (newPassword.length < 6) {
-    return res.status(400).json({ 
-      status: false, 
-      message: 'New password must be at least 6 characters long', 
-      data: {} 
+    return res.status(400).json({
+      status: false,
+      message: 'New password must be at least 6 characters long',
+      data: {}
     });
   }
 
@@ -444,30 +451,30 @@ exports.changePassword = async (req, res) => {
 
     // Check if user has a password set (for users who registered without password)
     if (!user.password) {
-      return res.status(400).json({ 
-        status: false, 
-        message: 'No password set for this account. Please set a password first.', 
-        data: {} 
+      return res.status(400).json({
+        status: false,
+        message: 'No password set for this account. Please set a password first.',
+        data: {}
       });
     }
 
     // Verify current password
     const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
     if (!isCurrentPasswordValid) {
-      return res.status(400).json({ 
-        status: false, 
-        message: 'Current password is incorrect', 
-        data: {} 
+      return res.status(400).json({
+        status: false,
+        message: 'Current password is incorrect',
+        data: {}
       });
     }
 
     // Check if new password is same as current password
     const isNewPasswordSame = await bcrypt.compare(newPassword, user.password);
     if (isNewPasswordSame) {
-      return res.status(400).json({ 
-        status: false, 
-        message: 'New password must be different from current password', 
-        data: {} 
+      return res.status(400).json({
+        status: false,
+        message: 'New password must be different from current password',
+        data: {}
       });
     }
 
@@ -476,10 +483,10 @@ exports.changePassword = async (req, res) => {
     user.password = hashedNewPassword;
     await user.save();
 
-    res.json({ 
-      status: true, 
-      message: 'Password changed successfully', 
-      data: {} 
+    res.json({
+      status: true,
+      message: 'Password changed successfully',
+      data: {}
     });
   } catch (err) {
     console.error('Error in changePassword:', err);

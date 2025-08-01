@@ -217,14 +217,12 @@ router.get('/profile', auth, getUserProfile);
  *                 example: ["64f8a1b2c3d4e5f6a7b8c9d0", "64f8a1b2c3d4e5f6a7b8c9d1"]
  *               profilePhoto:
  *                 type: string
- *                 format: uri
- *                 description: URL to user's profile photo (optional)
- *                 example: "https://example.com/profile.jpg"
+ *                 description: User's profile photo path or URL (optional)
+ *                 example: "uploads/profile-photo.jpg"
  *               logo:
  *                 type: string
- *                 format: uri
- *                 description: URL to user's logo (optional)
- *                 example: "https://example.com/logo.png"
+ *                 description: User's logo path or URL (optional)
+ *                 example: "uploads/logo.png"
  *     responses:
  *       200:
  *         description: User profile updated
