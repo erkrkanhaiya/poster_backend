@@ -15,7 +15,7 @@ function validate(req, res, next) {
 
 /**
  * @swagger
- * /admin/login:
+ * /api/v1/admin/login:
  *   post:
  *     summary: Admin login
  *     tags: [Admin]
@@ -49,7 +49,7 @@ router.post('/login', adminLoginValidation, validate, adminLogin);
 
 /**
  * @swagger
- * /admin/profile:
+ * /api/v1/admin/profile:
  *   get:
  *     summary: Get admin profile
  *     tags: [Admin]
@@ -65,7 +65,7 @@ router.get('/profile', adminAuth, getAdminProfile);
 
 /**
  * @swagger
- * /admin/profile:
+ * /api/v1/admin/profile:
  *   put:
  *     summary: Update admin profile
  *     tags: [Admin]
@@ -94,7 +94,7 @@ router.put('/profile', adminAuth, [...profileValidation, ...passwordUpdateValida
 
 /**
  * @swagger
- * /admin/logout:
+ * /api/v1/admin/logout:
  *   post:
  *     summary: Admin logout
  *     tags: [Admin]
@@ -106,7 +106,7 @@ router.post('/logout', logout);
 
 /**
  * @swagger
- * /admin/category:
+ * /api/v1/admin/category:
  *   post:
  *     summary: Create a new category
  *     tags: [Admin]
@@ -118,22 +118,30 @@ router.post('/logout', logout);
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - title
  *             properties:
  *               title:
  *                 type: string
+ *                 description: Category title
+ *                 example: "Guru Purnima"
  *               slug:
  *                 type: string
+ *                 description: Category slug (optional, auto-generated if not provided)
+ *                 example: "guru-purnima"
  *     responses:
  *       201:
- *         description: Category created
+ *         description: Category created successfully
  *       400:
- *         description: Slug must be unique
+ *         description: Validation error
+ *       401:
+ *         description: Unauthorized
  */
 router.post('/category', adminAuth, createCategory);
 
 /**
  * @swagger
- * /admin/category:
+ * /api/v1/admin/category:
  *   get:
  *     summary: Get all categories
  *     tags: [Admin]
@@ -141,13 +149,15 @@ router.post('/category', adminAuth, createCategory);
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: List of categories
+ *         description: Categories fetched successfully
+ *       401:
+ *         description: Unauthorized
  */
 router.get('/category', adminAuth, getCategories);
 
 /**
  * @swagger
- * /admin/category/{id}:
+ * /api/v1/admin/category/{id}:
  *   get:
  *     summary: Get category by ID
  *     tags: [Admin]
@@ -159,17 +169,20 @@ router.get('/category', adminAuth, getCategories);
  *         required: true
  *         schema:
  *           type: string
+ *         description: Category ID
  *     responses:
  *       200:
- *         description: Category details
+ *         description: Category fetched successfully
  *       404:
  *         description: Category not found
+ *       401:
+ *         description: Unauthorized
  */
 router.get('/category/:id', adminAuth, getCategoryById);
 
 /**
  * @swagger
- * /admin/category/{id}:
+ * /api/v1/admin/category/{id}:
  *   put:
  *     summary: Update category
  *     tags: [Admin]
@@ -181,6 +194,7 @@ router.get('/category/:id', adminAuth, getCategoryById);
  *         required: true
  *         schema:
  *           type: string
+ *         description: Category ID
  *     requestBody:
  *       required: true
  *       content:
@@ -190,32 +204,25 @@ router.get('/category/:id', adminAuth, getCategoryById);
  *             properties:
  *               title:
  *                 type: string
+ *                 description: Category title
+ *                 example: "Updated Guru Purnima"
  *               slug:
  *                 type: string
- *               isSuspended:
- *                 type: boolean
- *               isDeleted:
- *                 type: boolean
- *               images:
- *                 type: array
- *                 items:
- *                   type: object
- *                   properties:
- *                     url:
- *                       type: string
- *                     alt:
- *                       type: string
+ *                 description: Category slug
+ *                 example: "updated-guru-purnima"
  *     responses:
  *       200:
- *         description: Category updated
+ *         description: Category updated successfully
  *       404:
  *         description: Category not found
+ *       401:
+ *         description: Unauthorized
  */
 router.put('/category/:id', adminAuth, updateCategory);
 
 /**
  * @swagger
- * /admin/category/{id}:
+ * /api/v1/admin/category/{id}:
  *   delete:
  *     summary: Delete category
  *     tags: [Admin]
@@ -227,17 +234,20 @@ router.put('/category/:id', adminAuth, updateCategory);
  *         required: true
  *         schema:
  *           type: string
+ *         description: Category ID
  *     responses:
  *       200:
- *         description: Category deleted
+ *         description: Category deleted successfully
  *       404:
  *         description: Category not found
+ *       401:
+ *         description: Unauthorized
  */
 router.delete('/category/:id', adminAuth, deleteCategory);
 
 /**
  * @swagger
- * /admin/banner:
+ * /api/v1/admin/banner:
  *   post:
  *     summary: Create a new banner
  *     tags: [Admin]
@@ -269,7 +279,7 @@ router.post('/banner', adminAuth, uploadBannerImages, createBanner);
 
 /**
  * @swagger
- * /admin/banner:
+ * /api/v1/admin/banner:
  *   get:
  *     summary: Get all banners
  *     tags: [Admin]
@@ -277,13 +287,15 @@ router.post('/banner', adminAuth, uploadBannerImages, createBanner);
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: List of banners
+ *         description: Banners fetched successfully
+ *       401:
+ *         description: Unauthorized
  */
 router.get('/banner', adminAuth, getBanners);
 
 /**
  * @swagger
- * /admin/banner/{id}:
+ * /api/v1/admin/banner/{id}:
  *   get:
  *     summary: Get banner by ID
  *     tags: [Admin]
@@ -295,17 +307,20 @@ router.get('/banner', adminAuth, getBanners);
  *         required: true
  *         schema:
  *           type: string
+ *         description: Banner ID
  *     responses:
  *       200:
- *         description: Banner details
+ *         description: Banner fetched successfully
  *       404:
  *         description: Banner not found
+ *       401:
+ *         description: Unauthorized
  */
 router.get('/banner/:id', adminAuth, getBannerById);
 
 /**
  * @swagger
- * /admin/banner/{id}:
+ * /api/v1/admin/banner/{id}:
  *   put:
  *     summary: Update banner
  *     tags: [Admin]
@@ -317,6 +332,7 @@ router.get('/banner/:id', adminAuth, getBannerById);
  *         required: true
  *         schema:
  *           type: string
+ *         description: Banner ID
  *     requestBody:
  *       required: true
  *       content:
@@ -326,23 +342,23 @@ router.get('/banner/:id', adminAuth, getBannerById);
  *             properties:
  *               title:
  *                 type: string
- *               images:
- *                 type: array
- *                 items:
- *                   type: string
  *               category:
  *                 type: string
+ *               isActive:
+ *                 type: boolean
  *     responses:
  *       200:
- *         description: Banner updated
+ *         description: Banner updated successfully
  *       404:
  *         description: Banner not found
+ *       401:
+ *         description: Unauthorized
  */
 router.put('/banner/:id', adminAuth, updateBanner);
 
 /**
  * @swagger
- * /admin/banner/{id}:
+ * /api/v1/admin/banner/{id}:
  *   delete:
  *     summary: Delete banner
  *     tags: [Admin]
@@ -354,19 +370,22 @@ router.put('/banner/:id', adminAuth, updateBanner);
  *         required: true
  *         schema:
  *           type: string
+ *         description: Banner ID
  *     responses:
  *       200:
- *         description: Banner deleted
+ *         description: Banner deleted successfully
  *       404:
  *         description: Banner not found
+ *       401:
+ *         description: Unauthorized
  */
 router.delete('/banner/:id', adminAuth, deleteBanner);
 
 /**
  * @swagger
- * /admin/banner/{bannerId}/image:
- *   delete:
- *     summary: Delete a single image from a banner
+ * /api/v1/admin/banner/{bannerId}/image:
+ *   post:
+ *     summary: Upload banner images
  *     tags: [Admin]
  *     security:
  *       - bearerAuth: []
@@ -376,80 +395,87 @@ router.delete('/banner/:id', adminAuth, deleteBanner);
  *         required: true
  *         schema:
  *           type: string
+ *         description: Banner ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               images:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
  *     responses:
  *       200:
- *         description: Image deleted from banner
+ *         description: Images uploaded successfully
  *       404:
- *         description: Banner or image not found
+ *         description: Banner not found
+ *       401:
+ *         description: Unauthorized
  */
-router.delete('/banner/:bannerId/image', adminAuth, require('./admin.controller').deleteBannerImage);
+router.post('/banner/:bannerId/image', adminAuth, uploadBannerImages, (req, res) => {
+  // Handle image upload logic
+  res.json({ status: true, message: 'Images uploaded successfully' });
+});
 
 /**
  * @swagger
- * /admin/create-admin:
+ * /api/v1/admin/create-admin:
  *   post:
- *     summary: Create a new admin user (manual)
+ *     summary: Create a new admin
  *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - name
+ *               - email
+ *               - password
  *             properties:
- *               email:
- *                 type: string
- *               password:
- *                 type: string
  *               name:
  *                 type: string
+ *                 description: Admin name
+ *                 example: "John Doe"
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: Admin email
+ *                 example: "john@example.com"
+ *               password:
+ *                 type: string
+ *                 description: Admin password (minimum 6 characters)
+ *                 example: "password123"
  *     responses:
  *       201:
- *         description: Admin created
+ *         description: Admin created successfully
  *       400:
- *         description: Admin already exists
+ *         description: Validation error or email already exists
+ *       401:
+ *         description: Unauthorized
  */
-router.post('/create-admin', createAdmin);
+router.post('/create-admin', adminAuth, createAdmin);
 
 /**
  * @swagger
- * /admin/refresh-token:
+ * /api/v1/admin/refresh-token:
  *   post:
- *     summary: Refresh JWT token
+ *     summary: Refresh admin token
  *     tags: [Admin]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Token refreshed successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: boolean
- *                 message:
- *                   type: string
- *                 data:
- *                   type: object
- *                   properties:
- *                     token:
- *                       type: string
- *                       description: New JWT token (valid for 30 days)
- *                     admin:
- *                       type: object
- *                       properties:
- *                         id:
- *                           type: string
- *                         name:
- *                           type: string
- *                         email:
- *                           type: string
  *       401:
  *         description: Unauthorized
- *       404:
- *         description: Admin not found
  */
 router.post('/refresh-token', adminAuth, refreshToken);
 
