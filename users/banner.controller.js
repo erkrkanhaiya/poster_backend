@@ -1,6 +1,7 @@
 const Banner = require('../common/banner.model');
 const User = require('../common/users.model');
 const Download = require('../common/download.model');
+const Category = require('../common/category.model');
 
 // Get banners for user's interests + selected category
 exports.getBanners = async (req, res) => {
@@ -52,7 +53,7 @@ exports.getBanners = async (req, res) => {
     // Get banners for all relevant categories
     const banners = await Banner.find({ 
       category: { $in: categoryIds },
-      isActive: true 
+    //   isActive: true 
     })
     .populate('category', 'title slug')
     .sort({ createdAt: -1 })
@@ -91,6 +92,100 @@ exports.getBanners = async (req, res) => {
 
   } catch (error) {
     console.error('Error in getBanners:', error);
+    res.status(500).json({ 
+      status: false, 
+      message: 'Server error', 
+      data: {} 
+    });
+  }
+};
+
+// Get categories with banner counts and all banners when "All" is selected
+exports.getCategoriesWithBannerCounts = async (req, res) => {
+  try {
+    const { categoryId, page = 1, limit = 20 } = req.query;
+    const skip = (page - 1) * limit;
+
+    // Get all categories with banner counts
+    const categoriesWithCounts = await Category.aggregate([
+      {
+        $lookup: {
+          from: 'banners',
+          localField: '_id',
+          foreignField: 'category',
+          as: 'banners'
+        }
+      },
+      {
+        $addFields: {
+          bannerCount: {
+            $size: {
+              $filter: {
+                input: '$banners',
+                cond: { $eq: ['$$this.isActive', true] }
+              }
+            }
+          }
+        }
+      },
+      {
+        $project: {
+          _id: 1,
+          title: 1,
+          slug: 1,
+          bannerCount: 1
+        }
+      },
+      {
+        $sort: { bannerCount: -1 }
+      }
+    ]);
+
+    // Build query for banners
+    let bannerQuery = {  };
+    
+    // If categoryId is provided, filter by that category
+    if (categoryId) {
+      bannerQuery.category = categoryId;
+    }
+
+    // Get banners based on query
+    const banners = await Banner.find(bannerQuery)
+      .populate('category', 'title slug')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    // Get download counts for each banner
+    const bannersWithDownloads = await Promise.all(
+      banners.map(async (banner) => {
+        const downloadCount = await Download.countDocuments({ bannerId: banner._id });
+        return {
+          ...banner.toObject(),
+          downloadCount
+        };
+      })
+    );
+
+    const totalBanners = await Banner.countDocuments(bannerQuery);
+
+    res.json({ 
+      status: true, 
+      message: 'Categories with banner counts fetched successfully', 
+      data: { 
+        categories: categoriesWithCounts,
+        banners: bannersWithDownloads,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total: totalBanners,
+          pages: Math.ceil(totalBanners / limit)
+        }
+      } 
+    });
+
+  } catch (error) {
+    console.error('Error in getCategoriesWithBannerCounts:', error);
     res.status(500).json({ 
       status: false, 
       message: 'Server error', 

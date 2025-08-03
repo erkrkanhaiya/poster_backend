@@ -4,7 +4,7 @@ const { getPublicSettings, checkAppVersion } = require('./settings.controller');
 
 /**
  * @swagger
- * /api/v1/user/settings:
+ * /api/v1/users/settings:
  *   get:
  *     summary: Get public app settings (for client apps)
  *     tags: [Settings]
@@ -47,7 +47,7 @@ router.get('/', getPublicSettings);
 
 /**
  * @swagger
- * /api/v1/user/settings/check-version:
+ * /api/v1/users/settings/check-version:
  *   post:
  *     summary: Check app version (public endpoint)
  *     tags: [Settings]
