@@ -7,7 +7,7 @@ const auth = require('../middleware/auth');
  * @swagger
  * /api/v1/users/banners:
  *   get:
- *     summary: Get banners for user's interests + selected category
+ *     summary: Get banners filtered by categoryId or from home categories when "all" is selected
  *     tags: [User - Banners]
  *     security:
  *       - bearerAuth: []
@@ -16,7 +16,7 @@ const auth = require('../middleware/auth');
  *         name: categoryId
  *         schema:
  *           type: string
- *         description: Selected category ID (optional - if not provided, shows only user's interests)
+ *         description: Category ID to filter banners. Use "all" to get banners from home categories, or specific category ID, or omit for all banners
  *         example: "507f1f77bcf86cd799439011"
  *       - in: query
  *         name: page
@@ -87,7 +87,7 @@ const auth = require('../middleware/auth');
  *       401:
  *         description: Unauthorized
  *       404:
- *         description: User not found
+ *         description: Category not found
  */
 router.get('/', auth, getBanners);
 

@@ -2,63 +2,52 @@ const Banner = require('../common/banner.model');
 const User = require('../common/users.model');
 const Download = require('../common/download.model');
 const Category = require('../common/category.model');
+const HomeCategory = require('../common/homeCategory.model');
 
-// Get banners for user's interests + selected category
+// Get banners filtered by categoryId or from home categories when "all" is selected
 exports.getBanners = async (req, res) => {
   try {
     const { categoryId, page = 1, limit = 20 } = req.query;
-    const userId = req.user.id;
     const skip = (page - 1) * limit;
 
-    // Get user's interests
-    const user = await User.findById(userId).populate('interests');
-    if (!user) {
-      return res.status(404).json({ 
-        status: false, 
-        message: 'User not found', 
-        data: {} 
-      });
-    }
-
-    // Create array of category IDs (user interests + selected category)
-    const categoryIds = [];
+    // Build query based on categoryId filter
+    const query = { };
     
-    // Add user's interests
-    if (user.interests && user.interests.length > 0) {
-      categoryIds.push(...user.interests.map(interest => interest._id));
+    if (categoryId && categoryId !== 'all') {
+      // Specific category filter
+      query.category = categoryId;
+    } else if (categoryId === 'all') {
+      // Get banners from all home categories
+      const homeCategories = await HomeCategory.find({ isSuspended: false });
+      const homeCategoryIds = homeCategories.map(hc => hc.categoryId);
+      
+      if (homeCategoryIds.length > 0) {
+        query.category = { $in: homeCategoryIds };
+      } else {
+        // If no home categories, return empty
+        return res.json({ 
+          status: true, 
+          message: 'No home categories available', 
+          data: { 
+            banners: [],
+            pagination: {
+              page: parseInt(page),
+              limit: parseInt(limit),
+              total: 0,
+              pages: 0
+            }
+          } 
+        });
+      }
     }
-    
-    // Add selected category if provided and not already in user's interests
-    if (categoryId && !categoryIds.includes(categoryId)) {
-      categoryIds.push(categoryId);
-    }
-
-    // If no categories, return empty
-    if (categoryIds.length === 0) {
-      return res.json({ 
-        status: true, 
-        message: 'No categories available', 
-        data: { 
-          banners: [],
-          pagination: {
-            page: parseInt(page),
-            limit: parseInt(limit),
-            total: 0,
-            pages: 0
-          }
-        } 
-      });
-    }
-
-    // Get banners for all relevant categories
-    const banners = await Banner.find({ 
-      category: { $in: categoryIds },
-    //   isActive: true 
-    })
-    .populate('category', 'title slug')
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(parseInt(limit));
+    // If no categoryId provided, show all banners
+console.log("query",query)
+    // Get banners
+    const banners = await Banner.find(query)
+      .populate('category', 'title slug')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
 
     // Get download counts for each banner
     const bannersWithDownloads = await Promise.all(
@@ -71,10 +60,7 @@ exports.getBanners = async (req, res) => {
       })
     );
 
-    const total = await Banner.countDocuments({ 
-      category: { $in: categoryIds },
-      isActive: true 
-    });
+    const total = await Banner.countDocuments(query);
 
     res.json({ 
       status: true, 

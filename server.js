@@ -33,12 +33,14 @@ const apiV1Router = express.Router();
 
 apiV1Router.use('/admin', require('./admin/admin.routes'));
 apiV1Router.use('/admin/settings', require('./admin/settings.routes'));
+apiV1Router.use('/admin/home-categories', require('./admin/homeCategory.routes'));
   // apiV1Router.use('/admin/signed-url', require('./admin/signedUrl.routes'));
   // apiV1Router.use('/admin/upload-url', require('./admin/simpleSignedUrl.routes'));
 apiV1Router.use('/users/settings', require('./users/settings.routes'));
 apiV1Router.use('/users/pages', require('./users/page.routes'));
 apiV1Router.use('/users/categories', require('./users/category.routes'));
 apiV1Router.use('/users/banners', require('./users/banner.routes'));
+apiV1Router.use('/users/home-categories', require('./users/homeCategory.routes'));
 console.log('Loading upload-url routes...');
 apiV1Router.use('/users/upload-url', require('./users/simpleSignedUrl.routes'));
 console.log('Upload-url routes loaded successfully');
