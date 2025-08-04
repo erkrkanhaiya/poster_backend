@@ -19,7 +19,7 @@ exports.updateProfileValidation = [
   body('email').optional().isEmail().withMessage('Valid email is required if provided'),
   body('password').optional().isLength({ min: 6 }).withMessage('Password must be at least 6 characters if provided'),
   body('interests').optional().isArray().withMessage('Interests must be an array if provided'),
-  body('profilePhoto').optional().notEmpty().withMessage('Profile photo cannot be empty if provided'),
+  body('profilePhoto').optional().notEmpty().withMessage('Profile d photo cannot be empty if provided'),
   body('logo').optional().notEmpty().withMessage('Logo cannot be empty if provided'),
 ];
 
