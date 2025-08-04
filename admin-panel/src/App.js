@@ -3,10 +3,12 @@ import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-ro
 import { Box, Drawer, List, ListItem, ListItemIcon, ListItemText, AppBar, Toolbar, Typography, CssBaseline, IconButton, Menu, MenuItem, Switch } from '@mui/material';
 import HomeIcon from '@mui/icons-material/Home';
 import CategoryIcon from '@mui/icons-material/Category';
+import SubdirectoryArrowRightIcon from '@mui/icons-material/SubdirectoryArrowRight';
 import CollectionsIcon from '@mui/icons-material/Collections';
 import SettingsIcon from '@mui/icons-material/Settings';
 import Home from './pages/Home';
 import Category from './pages/Category';
+import SubCategory from './pages/SubCategory';
 import AddBanner from './pages/AddBanner';
 import Banners from './pages/Banners';
 import Login from './pages/Login';
@@ -17,7 +19,8 @@ const drawerWidth = 220;
 const menuItems = [
   { text: 'Home', icon: <HomeIcon />, path: '/' },
   { text: 'Banners', icon: <CollectionsIcon />, path: '/banners' },
-  { text: 'Add Category', icon: <CategoryIcon />, path: '/category' },
+  { text: 'Categories', icon: <CategoryIcon />, path: '/category' },
+  { text: 'Add Banner', icon: <SubdirectoryArrowRightIcon />, path: '/subcategory' },
 ];
 
 function App() {
@@ -109,6 +112,7 @@ function App() {
               <Route path="/banners" element={<Banners />} />
               <Route path="/add-banner" element={<AddBanner />} />
               <Route path="/category" element={<Category />} />
+              <Route path="/subcategory" element={<SubCategory />} />
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
           </Box>
