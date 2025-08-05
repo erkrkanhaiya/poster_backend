@@ -346,3 +346,59 @@ exports.downloadBanner = async (req, res) => {
     });
   }
 }; 
+
+// Get banner details by banner ID
+exports.getBannerDetail = async (req, res) => {
+  try {
+    const { bannerId } = req.params;
+
+    // Check if banner exists and get details
+    const banner = await Banner.findById(bannerId)
+      .populate('category', 'title slug')
+      .populate('subcategory', 'title slug');
+
+    if (!banner) {
+      return res.status(404).json({ 
+        status: false, 
+        message: 'Banner not found', 
+        data: {} 
+      });
+    }
+
+    // Get download count for this banner
+    const downloadCount = await Download.countDocuments({ bannerId: banner._id });
+
+    // Get user's download count for this banner (if user is authenticated)
+    let userDownloadCount = 0;
+    if (req.user && req.user.id) {
+      const userDownload = await Download.findOne({ 
+        bannerId: banner._id, 
+        userId: req.user.id 
+      });
+      userDownloadCount = userDownload ? userDownload.downloadCount : 0;
+    }
+
+    // Prepare banner data with download information
+    const bannerData = {
+      ...banner.toObject(),
+      downloadCount,
+      userDownloadCount
+    };
+
+    res.json({ 
+      status: true, 
+      message: 'Banner details fetched successfully', 
+      data: { 
+        banner: bannerData
+      } 
+    });
+
+  } catch (error) {
+    console.error('Error in getBannerDetail:', error);
+    res.status(500).json({ 
+      status: false, 
+      message: 'Server error', 
+      data: {} 
+    });
+  }
+}; 

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getBanners, getCategoriesWithBannerCounts, getTrendingBanners, downloadBanner } = require('./banner.controller');
+const { getBanners, getCategoriesWithBannerCounts, getTrendingBanners, downloadBanner, getBannerDetail } = require('./banner.controller');
 const auth = require('../middleware/auth');
 
 /**
@@ -321,5 +321,84 @@ router.get('/trending', auth, getTrendingBanners);
  *         description: Banner not found
  */
 router.post('/:bannerId/download', auth, downloadBanner);
+
+/**
+ * @swagger
+ * /api/v1/users/banners/{bannerId}:
+ *   get:
+ *     summary: Get banner details by banner ID
+ *     tags: [User - Banners]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: bannerId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Banner ID to get details for
+ *         example: "507f1f77bcf86cd799439011"
+ *     responses:
+ *       200:
+ *         description: Banner details fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     banner:
+ *                       type: object
+ *                       properties:
+ *                         _id:
+ *                           type: string
+ *                         title:
+ *                           type: string
+ *                         images:
+ *                           type: array
+ *                           items:
+ *                             type: string
+ *                         category:
+ *                           type: object
+ *                           properties:
+ *                             _id:
+ *                               type: string
+ *                             title:
+ *                               type: string
+ *                             slug:
+ *                               type: string
+ *                         subcategory:
+ *                           type: object
+ *                           properties:
+ *                             _id:
+ *                               type: string
+ *                             title:
+ *                               type: string
+ *                             slug:
+ *                               type: string
+ *                         downloadCount:
+ *                           type: integer
+ *                           description: Total number of downloads for this banner
+ *                         userDownloadCount:
+ *                           type: integer
+ *                           description: User's download count for this banner
+ *                         createdAt:
+ *                           type: string
+ *                           format: date-time
+ *                         updatedAt:
+ *                           type: string
+ *                           format: date-time
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Banner not found
+ */
+router.get('/:bannerId', auth, getBannerDetail);
 
 module.exports = router; 
