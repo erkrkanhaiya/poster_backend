@@ -1,5 +1,20 @@
 const Settings = require('../common/settings.model');
 
+// Get settings for admin
+exports.getSettings = async (req, res) => {
+  try {
+    const settings = await Settings.getSettings();
+    res.json({ 
+      status: true, 
+      message: 'Settings retrieved successfully', 
+      data: { settings } 
+    });
+  } catch (err) {
+    console.error('Error in getSettings:', err);
+    res.status(500).json({ status: false, message: 'Server error', data: {} });
+  }
+};
+
 // Update or create settings (single API)
 exports.updateSettings = async (req, res) => {
   try {

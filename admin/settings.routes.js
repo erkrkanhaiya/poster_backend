@@ -1,11 +1,52 @@
 const express = require('express');
 const router = express.Router();
-const { updateSettings } = require('./settings.controller');
+const { getSettings, updateSettings } = require('./settings.controller');
 const adminAuth = require('../middleware/adminAuth');
 
 /**
  * @swagger
  * /admin/settings:
+ *   get:
+ *     summary: Get app settings for admin
+ *     tags: [Admin Settings]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Settings retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     settings:
+ *                       type: object
+ *                       properties:
+ *                         isForceUpdate:
+ *                           type: boolean
+ *                         appVersion:
+ *                           type: string
+ *                         isMaintenance:
+ *                           type: boolean
+ *                         maintenanceMessage:
+ *                           type: string
+ *                         minVersion:
+ *                           type: string
+ *                         updateMessage:
+ *                           type: string
+ *                         playStoreUrl:
+ *                           type: string
+ *                         appStoreUrl:
+ *                           type: string
+ *       401:
+ *         description: Unauthorized
  *   put:
  *     summary: Update or create app settings (single record)
  *     tags: [Admin Settings]
@@ -97,6 +138,7 @@ const adminAuth = require('../middleware/adminAuth');
  *       401:
  *         description: Unauthorized
  */
+router.get('/', adminAuth, getSettings);
 router.put('/', adminAuth, updateSettings);
 
 module.exports = router; 

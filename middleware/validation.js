@@ -20,8 +20,8 @@ exports.updateProfileValidation = [
   body('password').optional().isLength({ min: 6 }).withMessage('Password must be at least 6 characters if provided'),
   body('interests').optional().isArray().withMessage('Interests must be an array if provided'),
   body('interests.*').optional().isMongoId().withMessage('Invalid interest ID'),
-  body('profilePhoto').optional().withMessage('Profile photo cannot be empty if provided'),
-  body('logo').optional().withMessage('Logo cannot be empty if provided'),
+  body('profilePhoto').optional().isString().withMessage('Profile photo must be a string if provided'),
+  body('logo').optional().isString().withMessage('Logo must be a string if provided'),
 ];
 
 exports.passwordUpdateValidation = [

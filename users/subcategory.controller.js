@@ -3,43 +3,7 @@ const Category = require('../common/category.model');
 const User = require('../common/users.model');
 const mongoose = require('mongoose');
 
-// Helper function to get personalized subcategories based on user interests
-const getPersonalizedSubcategories = async (userId, filter, skip, limit) => {
-  try {
-    // Validate userId format
-    if (!userId || !userId.toString().match(/^[0-9a-fA-F]{24}$/)) {
-      return null;
-    }
-    
-    // Try to get user interests
-    const user = await User.findById(userId).select('interests').populate('interests', '_id');
-    
-    if (user && user.interests && user.interests.length > 0) {
-      // User has interests - filter by those categories
-      const interestCategoryIds = user.interests
-        .map(interest => interest._id)
-        .filter(id => id && id.toString().match(/^[0-9a-fA-F]{24}$/)); // Validate ObjectId format
-      
-      if (interestCategoryIds.length > 0) {
-        filter.category = { $in: interestCategoryIds };
-        
-        const subcategories = await Subcategory.find(filter)
-          .populate('category', 'title slug')
-          .sort({ sortOrder: 1, createdAt: -1 })
-          .skip(skip)
-          .limit(limit)
-          .select('-isDeleted -isSuspended');
-          
-        return { subcategories, isPersonalized: true, interestCategories: interestCategoryIds };
-      }
-    }
-    
-    return null; // No interests found
-  } catch (error) {
-    console.error('Error getting personalized subcategories:', error);
-    return null; // Fall back to default behavior
-  }
-};
+// Note: Removed getPersonalizedSubcategories function - now using inline logic for interests on top
 
 // Helper function to get trending/popular subcategories as fallback
 const getTrendingSubcategories = async (filter, skip, limit) => {
@@ -268,43 +232,100 @@ exports.getSubcategories = async (req, res) => {
     // If no valid category specified (empty, null, or undefined) - apply personalization
     if (!subcategories) {
       // No specific category requested - apply personalization logic
-      let personalizedResult = null;
       
-      // Try to get personalized results if user is authenticated
       if (req.user && req.user.id) {
-        personalizedResult = await getPersonalizedSubcategories(req.user.id, { ...filter }, skip, parseInt(limit));
-      }
-      
-      if (personalizedResult && personalizedResult.subcategories.length > 0) {
-        // Use personalized results based on user interests
-        subcategories = personalizedResult.subcategories;
-        personalizationInfo = {
-          isPersonalized: true,
-          filterType: 'user_interests',
-          interestCategories: personalizedResult.interestCategories
-        };
+        // User is authenticated - return all subcategories with user interests on top
+        try {
+          // Get user interests first
+          const user = await User.findById(req.user.id).select('interests').populate('interests', '_id');
+          
+          if (user && user.interests && user.interests.length > 0) {
+            const interestCategoryIds = user.interests
+              .map(interest => interest._id.toString())
+              .filter(id => id && id.match(/^[0-9a-fA-F]{24}$/));
+            
+            // Get all subcategories
+            const allSubcategories = await Subcategory.find(filter)
+              .populate('category', 'title slug')
+              .sort({ sortOrder: 1, createdAt: -1 })
+              .select('-isDeleted -isSuspended');
+            
+            // Separate interest and non-interest subcategories
+            const interestSubcategories = [];
+            const otherSubcategories = [];
+            
+            allSubcategories.forEach(sub => {
+              if (interestCategoryIds.includes(sub.category._id.toString())) {
+                interestSubcategories.push(sub);
+              } else {
+                otherSubcategories.push(sub);
+              }
+            });
+            
+            // Combine with interest subcategories on top
+            const sortedSubcategories = [...interestSubcategories, ...otherSubcategories];
+            
+            // Apply pagination
+            subcategories = sortedSubcategories.slice(skip, skip + parseInt(limit));
+            
+            personalizationInfo = {
+              isPersonalized: true,
+              filterType: 'user_interests_on_top',
+              interestCategories: interestCategoryIds,
+              totalInterestSubcategories: interestSubcategories.length
+            };
+          } else {
+            // User has no interests - fall back to trending
+            const trendingResult = await getTrendingSubcategories({ ...filter }, skip, parseInt(limit));
+            subcategories = trendingResult.subcategories;
+            personalizationInfo = {
+              isPersonalized: false,
+              filterType: 'trending_fallback',
+              fallbackReason: 'no_interests'
+            };
+          }
+        } catch (error) {
+          console.error('Error in personalized sorting:', error);
+          // Fall back to trending on error
+          const trendingResult = await getTrendingSubcategories({ ...filter }, skip, parseInt(limit));
+          subcategories = trendingResult.subcategories;
+          personalizationInfo = {
+            isPersonalized: false,
+            filterType: 'trending_fallback',
+            fallbackReason: 'error'
+          };
+        }
       } else {
-        // Fall back to trending/popular subcategories
+        // No authentication - fall back to trending/popular subcategories
         const trendingResult = await getTrendingSubcategories({ ...filter }, skip, parseInt(limit));
         subcategories = trendingResult.subcategories;
         personalizationInfo = {
           isPersonalized: false,
           filterType: 'trending_fallback',
-          fallbackReason: req.user ? 'no_interests' : 'not_authenticated'
+          fallbackReason: 'not_authenticated'
         };
       }
     }
 
-    // Filter images by language if specified
-    if (language) {
-      subcategories = subcategories.map(subcategory => {
-        const filteredSubcategory = subcategory.toObject ? subcategory.toObject() : subcategory;
+    // Filter images by language if specified and limit to 7 latest images
+    subcategories = subcategories.map(subcategory => {
+      const filteredSubcategory = subcategory.toObject ? subcategory.toObject() : subcategory;
+      
+      // Filter by language if specified
+      if (language) {
         filteredSubcategory.images = filteredSubcategory.images.filter(image => 
           image.language === language
         );
-        return filteredSubcategory;
-      });
-    }
+      }
+      
+      // Limit to 7 latest images (assuming images are already sorted by creation/upload order)
+      // If you want to sort by a specific field, you can sort here first
+      if (filteredSubcategory.images && filteredSubcategory.images.length > 7) {
+        filteredSubcategory.images = filteredSubcategory.images.slice(0, 7);
+      }
+      
+      return filteredSubcategory;
+    });
 
     // Get total count based on the same filter logic
     let total;
@@ -326,13 +347,8 @@ exports.getSubcategories = async (req, res) => {
     } else if (category && category.trim() !== '') {
       total = await Subcategory.countDocuments({ ...filter, category: category.trim() });
     } else {
-      // No category specified - count based on personalization
-      if (personalizationInfo.isPersonalized) {
-        const countFilter = { ...filter, category: { $in: personalizationInfo.interestCategories } };
-        total = await Subcategory.countDocuments(countFilter);
-      } else {
-        total = await Subcategory.countDocuments(filter);
-      }
+      // No category specified - count all subcategories (new behavior: all subcategories with interests on top)
+      total = await Subcategory.countDocuments(filter);
     }
 
     const totalPages = Math.ceil(total / limit);
