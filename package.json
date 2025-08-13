@@ -1,0 +1,43 @@
+{
+  "name": "banner",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "install:all": "npm install && cd admin-panel && npm install",
+    "start:backend": "node server.js",
+    "start:admin": "cd admin-panel && npm start",
+    "start:all": "npm-run-all --parallel start:backend start:admin",
+    "rm": "rm -rf node_modules admin-panel/node_modules package-lock.json admin-panel/package-lock.json yarn.lock admin-panel/yarn.lock",
+    "dev": "nodemon server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.850.0",
+    "@aws-sdk/s3-request-presigner": "^3.857.0",
+    "@mui/icons-material": "^7.2.0",
+    "aws-sdk": "^2.1692.0",
+    "axios": "^1.11.0",
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.0",
+    "express": "^5.1.0",
+    "express-validator": "^7.2.1",
+    "ioredis": "^5.6.1",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.16.4",
+    "multer": "^2.0.2",
+    "multer-s3": "^2.10.0",
+    "razorpay": "^2.9.2",
+    "recharts": "^3.1.0",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
+    "twilio": "^5.8.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10",
+    "npm-run-all": "^4.1.5"
+  }
+}

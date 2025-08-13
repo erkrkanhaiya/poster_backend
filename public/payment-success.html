@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Success</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            background: #28a745;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 30px;
+            animation: bounce 0.6s ease-in-out;
+        }
+
+        .success-icon::after {
+            content: "✓";
+            color: white;
+            font-size: 40px;
+            font-weight: bold;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateY(0);
+            }
+            40% {
+                transform: translateY(-10px);
+            }
+            60% {
+                transform: translateY(-5px);
+            }
+        }
+
+        .title {
+            font-size: 28px;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 16px;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+
+        .details {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            text-align: left;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .detail-row:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .detail-label {
+            color: #666;
+            font-weight: 500;
+        }
+
+        .detail-value {
+            color: #333;
+            font-weight: bold;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .redirect-message {
+            margin-top: 20px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .countdown {
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="success-icon"></div>
+        
+        <h1 class="title">Payment Successful!</h1>
+        <p class="subtitle">Your payment has been processed successfully.</p>
+
+        <div class="details">
+            <div class="detail-row">
+                <span class="detail-label">Payment ID:</span>
+                <span class="detail-value" id="paymentId">Loading...</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Order ID:</span>
+                <span class="detail-value" id="orderId">Loading...</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Amount:</span>
+                <span class="detail-value" id="amount">Loading...</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Status:</span>
+                <span class="detail-value" style="color: #28a745;">Completed</span>
+            </div>
+        </div>
+
+        <div class="buttons">
+            <a href="#" class="btn btn-primary" id="returnBtn">Return to App</a>
+            <a href="#" class="btn btn-secondary" id="supportBtn">Contact Support</a>
+        </div>
+
+        <div class="redirect-message">
+            Returning to app in <span class="countdown" id="countdown">5</span> seconds...
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Verifying payment...</p>
+        </div>
+    </div>
+
+    <script>
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const razorpay_payment_id = urlParams.get('razorpay_payment_id');
+        const razorpay_order_id = urlParams.get('razorpay_order_id');
+        const razorpay_signature = urlParams.get('razorpay_signature');
+        const transactionId = urlParams.get('transactionId');
+
+        // Display payment details
+        if (razorpay_payment_id) {
+            document.getElementById('paymentId').textContent = razorpay_payment_id;
+        }
+        if (razorpay_order_id) {
+            document.getElementById('orderId').textContent = razorpay_order_id;
+        }
+
+        // Verify payment with your backend
+        async function verifyPayment() {
+            if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature || !transactionId) {
+                console.log('Missing payment parameters');
+                return;
+            }
+
+            try {
+                document.getElementById('loading').style.display = 'block';
+                
+                const response = await fetch('/users/payment/verify', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+                    },
+                    body: JSON.stringify({
+                        razorpay_order_id: razorpay_order_id,
+                        razorpay_payment_id: razorpay_payment_id,
+                        razorpay_signature: razorpay_signature,
+                        transactionId: transactionId
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.status) {
+                    console.log('Payment verified successfully');
+                    // You can update UI here if needed
+                } else {
+                    console.error('Payment verification failed:', data.message);
+                }
+            } catch (error) {
+                console.error('Error verifying payment:', error);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        // Verify payment when page loads
+        verifyPayment();
+
+        // Set up return button
+        const returnBtn = document.getElementById('returnBtn');
+        const supportBtn = document.getElementById('supportBtn');
+
+        // You can customize these URLs based on your app
+        returnBtn.href = 'your-app-scheme://payment-success'; // Deep link to your app
+        supportBtn.href = 'mailto:support@yourcompany.com';
+
+        // Countdown timer
+        let countdown = 5;
+        const countdownElement = document.getElementById('countdown');
+        
+        const timer = setInterval(() => {
+            countdown--;
+            countdownElement.textContent = countdown;
+            
+            if (countdown <= 0) {
+                clearInterval(timer);
+                // Redirect to your app or website
+                window.location.href = returnBtn.href;
+            }
+        }, 1000);
+
+        // Stop countdown if user clicks any button
+        document.querySelectorAll('.btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                clearInterval(timer);
+            });
+        });
+    </script>
+</body>
+</html> 
