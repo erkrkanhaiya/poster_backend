@@ -1,0 +1,31 @@
+name: Deploy Banner Frontend App to EC2
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'admin-panel/**'
+
+jobs:
+  Deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Deploy frontend on EC2
+        env:
+          PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY }}
+          HOSTNAME: ${{ secrets.HOSTNAME }}
+          USERNAME: ${{ secrets.USERNAME }}
+        run: |
+          echo "$PRIVATE_KEY" > private_key && chmod 600 private_key
+          ssh -o StrictHostKeyChecking=no -i private_key ${USERNAME}@${HOSTNAME} '
+            cd /home/ubuntu/poster_backend &&
+            git checkout main &&
+            git fetch --all &&
+            git pull origin main &&
+            cd .. &&
+            docker-compose stop banner-frontend-app &&
+            docker-compose rm -f banner-frontend-app &&
+            docker-compose up -d --build banner-frontend-app
+          '
