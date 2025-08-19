@@ -48,7 +48,7 @@ const Login = ({ onLogin }) => {
           localStorage.removeItem('adminToken');
           setSnackbar({ open: true, message: 'Session expired. Please login again.', severity: 'warning' });
         }
-      } catch {}
+      } catch { }
     }
   }, []);
 
@@ -107,12 +107,24 @@ const Login = ({ onLogin }) => {
             </Button>
           </Box>
         </form>
+
+
+        <Typography
+          variant="body2"
+          align="center"
+          sx={{ color: 'text.secondary', mt: 4, fontSize: '8px' }}
+        >
+          Latest 19-Aug-25
+        </Typography>
+
         <Snackbar open={snackbar.open} autoHideDuration={4000} onClose={handleCloseSnackbar}>
           <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
             {snackbar.message}
           </Alert>
         </Snackbar>
+
       </Paper>
+
     </Box>
   );
 };
