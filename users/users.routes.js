@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { userLoginOrRegister, completeProfile, getUserProfile, updateUserProfile, logout, sendOtp, verifyOtp, getAllUsers, getUserById, refreshToken, changePassword } = require('./users.controller');
+const { userLoginOrRegister, completeProfile, getUserProfile, updateUserProfile, logout, sendOtp, verifyOtp, resendOtp, getAllUsers, getUserById, refreshToken, changePassword } = require('./users.controller');
 const auth = require('../middleware/auth');
 const { userLoginValidation, profileValidation, updateProfileValidation, passwordUpdateValidation, changePasswordValidation } = require('../middleware/validation');
 const { validationResult } = require('express-validator');
@@ -462,6 +462,55 @@ router.post('/verify-otp', verifyOtp);
 
 /**
  * @swagger
+ * /api/v1/users/resend-otp:
+ *   post:
+ *     summary: Resend OTP when verification fails
+ *     tags: [User]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - phone
+ *             properties:
+ *               phone:
+ *                 type: string
+ *                 description: Phone number (10 digits)
+ *                 example: "9999999999"
+ *     responses:
+ *       200:
+ *         description: New OTP sent successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     otp:
+ *                       type: string
+ *                       description: OTP (only in dev mode)
+ *                     message:
+ *                       type: string
+ *                       description: Additional message (only in dev mode)
+ *       400:
+ *         description: Invalid phone number
+ *       429:
+ *         description: Too many requests, please wait 30 seconds
+ *       500:
+ *         description: Failed to send OTP
+ */
+router.post('/resend-otp', resendOtp);
+
+/**
+ * @swagger
  * /api/v1/users/all:
  *   get:
  *     summary: Get all users (Admin only)
@@ -571,5 +620,94 @@ router.get('/all', auth, getAllUsers);
  *         description: User not found
  */
 router.post('/refresh-token', auth, refreshToken);
+
+/**
+ * @swagger
+ * /api/v1/users/test-fast2sms:
+ *   post:
+ *     summary: Test Fast2SMS integration (Admin only)
+ *     tags: [User]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - phone
+ *             properties:
+ *               phone:
+ *                 type: string
+ *                 description: Phone number to test (10 digits)
+ *                 example: "9999999999"
+ *     responses:
+ *       200:
+ *         description: Fast2SMS test completed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *       400:
+ *         description: Invalid phone number
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: SMS sending failed
+ */
+router.post('/test-fast2sms', auth, async (req, res) => {
+  try {
+    const { phone } = req.body;
+    
+    if (!phone || phone.length !== 10 || !/^\d{10}$/.test(phone)) {
+      return res.status(400).json({
+        status: false,
+        message: 'Invalid phone number. Must be 10 digits.',
+        data: {}
+      });
+    }
+
+    const fast2smsService = require('../utils/fast2sms');
+    const testOTP = '1234';
+    
+    const result = await fast2smsService.sendOTP(phone, testOTP);
+    
+    if (result.success) {
+      res.json({
+        status: true,
+        message: 'Fast2SMS test completed successfully',
+        data: {
+          phone,
+          testOTP,
+          smsResult: result
+        }
+      });
+    } else {
+      res.status(500).json({
+        status: false,
+        message: 'Fast2SMS test failed',
+        data: {
+          error: result.message,
+          details: result
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Fast2SMS test error:', error);
+    res.status(500).json({
+      status: false,
+      message: 'Internal server error',
+      data: {}
+    });
+  }
+});
 
 module.exports = router; 

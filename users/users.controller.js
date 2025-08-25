@@ -2,6 +2,7 @@ const User = require('../common/users.model');
 const OTP = require('../common/otp.model');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const fast2smsService = require('../utils/fast2sms');
 
 // OTP DEV/PROD MODE: Set DEV_BYPASS=true in .env to always use 123456 as OTP for dev/testing.
 // In production, set DEV_BYPASS=false or remove it.
@@ -15,8 +16,8 @@ exports.userLoginOrRegister = async (req, res) => {
   }
 
   try {
-    // Generate OTP
-    const otp = DEV_BYPASS ? '1234' : Math.floor(100000 + Math.random() * 9000).toString();
+    // Generate 4-digit OTP
+    const otp = DEV_BYPASS ? '1234' : Math.floor(1000 + Math.random() * 9000).toString();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes from now
 
     // Delete any existing unused OTPs for this phone
@@ -42,14 +43,23 @@ exports.userLoginOrRegister = async (req, res) => {
       });
     }
 
-    // In production, send OTP via SMS (implement your SMS service here)
-    console.log(`Sending OTP ${otp} to phone ${phone}`);
-
-    res.json({
-      status: true,
-      message: 'OTP sent successfully',
-      data: {}
-    });
+    // In production, send OTP via Fast2SMS
+    const smsResult = await fast2smsService.sendOTP(phone, otp);
+    
+    if (smsResult.success) {
+      res.json({
+        status: true,
+        message: 'OTP sent successfully',
+        data: {}
+      });
+    } else {
+      console.error('SMS sending failed:', smsResult.message);
+      res.status(500).json({
+        status: false,
+        message: 'Failed to send OTP. Please try again.',
+        data: {}
+      });
+    }
 
   } catch (err) {
     console.error('Error in userLoginOrRegister:', err);
@@ -234,8 +244,8 @@ exports.sendOtp = async (req, res) => {
       });
     }
 
-    // Generate OTP
-    const otp = process.env.DEV_OTP_BYPASS === 'true' ? '1234' : Math.floor(100000 + Math.random() * 9000).toString();
+    // Generate 4-digit OTP
+    const otp = process.env.DEV_OTP_BYPASS === 'true' ? '1234' : Math.floor(1000 + Math.random() * 9000).toString();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes from now
 
     // Delete any existing unused OTPs for this phone
@@ -261,17 +271,110 @@ exports.sendOtp = async (req, res) => {
       });
     }
 
-    // In production, send OTP via SMS (implement your SMS service here)
-    console.log(`Sending OTP ${otp} to phone ${phone}`);
-
-    res.json({
-      status: true,
-      message: 'OTP sent successfully',
-      data: {}
-    });
+    // In production, send OTP via Fast2SMS
+    const smsResult = await fast2smsService.sendOTP(phone, otp);
+    
+    if (smsResult.success) {
+      res.json({
+        status: true,
+        message: 'OTP sent successfully',
+        data: {}
+      });
+    } else {
+      console.error('SMS sending failed:', smsResult.message);
+      res.status(500).json({
+        status: false,
+        message: 'Failed to send OTP. Please try again.',
+        data: {}
+      });
+    }
 
   } catch (err) {
     console.error('Error in sendOtp:', err);
+    res.status(500).json({ status: false, message: 'Server error', data: {} });
+  }
+};
+
+// Resend OTP when verification fails
+exports.resendOtp = async (req, res) => {
+  const { phone } = req.body;
+
+  if (!phone) {
+    return res.status(400).json({ status: false, message: 'Phone number is required', data: {} });
+  }
+
+  try {
+    // Validate phone number format
+    if (phone.length !== 10 || !/^\d{10}$/.test(phone)) {
+      return res.status(400).json({ 
+        status: false, 
+        message: 'Invalid phone number format. Must be 10 digits.', 
+        data: {} 
+      });
+    }
+
+    // Check if there's a recent OTP request (rate limiting)
+    const recentOtp = await OTP.findOne({
+      phone,
+      isUsed: false,
+      createdAt: { $gte: new Date(Date.now() - 30 * 1000) } // Within last 30 seconds
+    });
+
+    if (recentOtp) {
+      return res.status(429).json({
+        status: false,
+        message: 'Please wait 30 seconds before requesting another OTP',
+        data: {}
+      });
+    }
+
+    // Generate 4-digit OTP
+    const otp = process.env.DEV_OTP_BYPASS === 'true' ? '1234' : Math.floor(1000 + Math.random() * 9000).toString();
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes from now
+
+    // Delete any existing unused OTPs for this phone
+    await OTP.deleteMany({ phone, isUsed: false });
+
+    // Create new OTP record
+    const otpRecord = new OTP({
+      phone,
+      otp,
+      expiresAt
+    });
+    await otpRecord.save();
+
+    // In development mode, return OTP in response
+    if (DEV_BYPASS) {
+      return res.json({
+        status: true,
+        message: 'New OTP sent successfully',
+        data: {
+          otp,
+          message: 'Use this OTP for verification (development mode)'
+        }
+      });
+    }
+
+    // In production, send OTP via Fast2SMS
+    const smsResult = await fast2smsService.sendOTP(phone, otp);
+    
+    if (smsResult.success) {
+      res.json({
+        status: true,
+        message: 'New OTP sent successfully via SMS',
+        data: {}
+      });
+    } else {
+      console.error('SMS sending failed:', smsResult.message);
+      res.status(500).json({
+        status: false,
+        message: 'Failed to send new OTP. Please try again.',
+        data: {}
+      });
+    }
+
+  } catch (err) {
+    console.error('Error in resendOtp:', err);
     res.status(500).json({ status: false, message: 'Server error', data: {} });
   }
 };
@@ -284,6 +387,24 @@ exports.verifyOtp = async (req, res) => {
   }
 
   try {
+    // Validate phone number format (10 digits for India)
+    if (phone.length !== 10 || !/^\d{10}$/.test(phone)) {
+      return res.status(400).json({ 
+        status: false, 
+        message: 'Invalid phone number format. Must be 10 digits.', 
+        data: {} 
+      });
+    }
+
+    // Validate OTP format (4 digits)
+    if (otp.length !== 4 || !/^\d{4}$/.test(otp)) {
+      return res.status(400).json({ 
+        status: false, 
+        message: 'Invalid OTP format. Must be 4 digits.', 
+        data: {} 
+      });
+    }
+
     // Find the OTP record
     const otpRecord = await OTP.findOne({
       phone,
@@ -292,7 +413,11 @@ exports.verifyOtp = async (req, res) => {
     });
 
     if (!otpRecord) {
-      return res.status(400).json({ status: false, message: 'OTP not found or expired', data: {} });
+      return res.status(400).json({ 
+        status: false, 
+        message: 'OTP not found or expired. Please request a new OTP.', 
+        data: {} 
+      });
     }
 
     // Check if OTP matches (with special handling for dev mode)
@@ -303,19 +428,35 @@ exports.verifyOtp = async (req, res) => {
       otpRecord.attempts += 1;
       await otpRecord.save();
 
-      // If too many attempts, mark as used
+      // If too many attempts, mark as used and suggest resending
       if (otpRecord.attempts >= 3) {
         otpRecord.isUsed = true;
         await otpRecord.save();
-        return res.status(400).json({ status: false, message: 'Too many failed attempts. Please request a new OTP', data: {} });
+        return res.status(400).json({ 
+          status: false, 
+          message: 'Too many failed attempts. Please request a new OTP via SMS.', 
+          data: {
+            attemptsExceeded: true,
+            suggestion: 'Use the send OTP endpoint to get a new code'
+          }
+        });
       }
 
-      return res.status(400).json({ status: false, message: 'Invalid OTP', data: {} });
+      return res.status(400).json({ 
+        status: false, 
+        message: `Invalid OTP. ${3 - otpRecord.attempts} attempts remaining.`, 
+        data: {
+          attemptsRemaining: 3 - otpRecord.attempts
+        }
+      });
     }
 
     // OTP is valid, mark as used
     otpRecord.isUsed = true;
     await otpRecord.save();
+
+    // Log successful OTP verification
+    console.log(`OTP verified successfully for phone: ${phone}`);
 
     // Find existing user
     const user = await User.findOne({ phone });
@@ -329,7 +470,8 @@ exports.verifyOtp = async (req, res) => {
           token: null,
           requiresProfileCompletion: true,
           isNewUser: true,
-          phone: phone
+          phone: phone,
+          otpVerified: true
         }
       });
     } else if (!user.isProfileCompleted) {
@@ -341,6 +483,7 @@ exports.verifyOtp = async (req, res) => {
           token: null,
           requiresProfileCompletion: true,
           isNewUser: false,
+          otpVerified: true,
           user: {
             id: user._id,
             phone: user.phone,
@@ -361,11 +504,12 @@ exports.verifyOtp = async (req, res) => {
 
       res.json({
         status: true,
-        message: 'OTP verified successfully',
+        message: 'OTP verified successfully. Welcome back!',
         data: {
           token,
           requiresProfileCompletion: false,
           isNewUser: false,
+          otpVerified: true,
           user: {
             id: user._id,
             phone: user.phone,
@@ -384,7 +528,11 @@ exports.verifyOtp = async (req, res) => {
 
   } catch (err) {
     console.error('Error in verifyOtp:', err);
-    res.status(500).json({ status: false, message: 'Server error', data: {} });
+    res.status(500).json({ 
+      status: false, 
+      message: 'Server error during OTP verification', 
+      data: {} 
+    });
   }
 };
 
