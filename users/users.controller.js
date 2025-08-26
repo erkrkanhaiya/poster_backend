@@ -4,8 +4,8 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const fast2smsService = require('../utils/fast2sms');
 
-// OTP DEV/PROD MODE: Set DEV_BYPASS=true in .env to always use 123456 as OTP for dev/testing.
-// In production, set DEV_BYPASS=false or remove it.
+// OTP DEV/PROD MODE: Set DEV_OTP_BYPASS=true in .env to always use 1234 as OTP for dev/testing.
+// In production, set DEV_OTP_BYPASS=false or remove it.
 const DEV_BYPASS = process.env.DEV_OTP_BYPASS === 'true';
 
 exports.userLoginOrRegister = async (req, res) => {
@@ -32,29 +32,29 @@ exports.userLoginOrRegister = async (req, res) => {
     await otpRecord.save();
 
     // In development mode, return OTP in response
-    if (DEV_BYPASS) {
-      return res.json({
-        status: true,
-        message: 'OTP sent successfully',
-        data: {
-          otp,
-          message: 'Use this OTP for verification (development mode)'
-        }
-      });
-    }
+    // if (DEV_BYPASS) {
+    //   return res.json({
+    //     status: true,
+    //     message: 'OTP sent successfully',
+    //     data: {
+    //       otp,
+    //       message: 'Use this OTP for verification (development mode)'
+    //     }
+    //   });
+    // }
 
     // In production, send OTP via Fast2SMS
     const smsResult = await fast2smsService.sendOTP(phone, otp);
     
     if (smsResult.success) {
-      res.json({
+      return res.json({
         status: true,
         message: 'OTP sent successfully',
         data: {}
       });
     } else {
       console.error('SMS sending failed:', smsResult.message);
-      res.status(500).json({
+      return res.status(500).json({
         status: false,
         message: 'Failed to send OTP. Please try again.',
         data: {}
@@ -63,7 +63,7 @@ exports.userLoginOrRegister = async (req, res) => {
 
   } catch (err) {
     console.error('Error in userLoginOrRegister:', err);
-    res.status(500).json({ status: false, message: 'Server error', data: {} });
+    return res.status(500).json({ status: false, message: 'Server error', data: {} });
   }
 };
 
@@ -113,7 +113,7 @@ exports.completeProfile = async (req, res) => {
     // Generate JWT token for completed profile
     const token = jwt.sign({ id: user._id, role: 'user' }, process.env.JWT_SECRET, { expiresIn: '30d' });
 
-    res.json({
+    return res.json({
       status: true,
       message: 'Profile completed successfully',
       data: {
@@ -123,7 +123,7 @@ exports.completeProfile = async (req, res) => {
     });
   } catch (err) {
     console.error('Error in completeProfile:', err);
-    res.status(500).json({ status: false, message: 'Server error', data: {} });
+    return res.status(500).json({ status: false, message: 'Server error', data: {} });
   }
 };
 
@@ -135,10 +135,10 @@ exports.getUserProfile = async (req, res) => {
 
     if (!user) return res.status(404).json({ status: false, message: 'User not found', data: {} });
     user.isPremium = false
-    res.json({ status: true, message: 'User profile retrieved', data: { user } });
+    return res.json({ status: true, message: 'User profile retrieved', data: { user } });
   } catch (err) {
     console.error('Error in getUserProfile:', err);
-    res.status(500).json({ status: false, message: 'Server error', data: {} });
+    return res.status(500).json({ status: false, message: 'Server error', data: {} });
   }
 };
 
@@ -173,23 +173,23 @@ exports.updateUserProfile = async (req, res) => {
     ).select('-password').populate('interests', 'title slug');
 
     if (!user) return res.status(404).json({ status: false, message: 'User not found', data: {} });
-    res.json({ status: true, message: 'User profile updated', data: { user } });
+    return res.json({ status: true, message: 'User profile updated', data: { user } });
   } catch (err) {
     console.error('Error in updateUserProfile:', err);
-    res.status(500).json({ status: false, message: 'Server error', data: {} });
+    return res.status(500).json({ status: false, message: 'Server error', data: {} });
   }
 };
 
 exports.logout = (req, res) => {
   // For JWT, logout is handled on the client by deleting the token
-  res.json({ status: true, message: 'Logged out successfully', data: {} });
+  return res.json({ status: true, message: 'Logged out successfully', data: {} });
 };
 
 // Get all users (for admin purposes)
 exports.getAllUsers = async (req, res) => {
   try {
     const users = await User.find().select('-password').sort({ createdAt: -1 });
-    res.json({
+    return res.json({
       status: true,
       message: 'Users fetched successfully',
       data: {
@@ -199,7 +199,7 @@ exports.getAllUsers = async (req, res) => {
     });
   } catch (err) {
     console.error('Error in getAllUsers:', err);
-    res.status(500).json({ status: false, message: 'Server error', data: {} });
+    return res.status(500).json({ status: false, message: 'Server error', data: {} });
   }
 };
 
@@ -210,14 +210,14 @@ exports.getUserById = async (req, res) => {
     if (!user) {
       return res.status(404).json({ status: false, message: 'User not found', data: {} });
     }
-    res.json({
+    return res.json({
       status: true,
       message: 'User fetched successfully',
       data: { user }
     });
   } catch (err) {
     console.error('Error in getUserById:', err);
-    res.status(500).json({ status: false, message: 'Server error', data: {} });
+    return res.status(500).json({ status: false, message: 'Server error', data: {} });
   }
 };
 
@@ -259,30 +259,30 @@ exports.sendOtp = async (req, res) => {
     });
     await otpRecord.save();
 
-    // In development mode, return OTP in response
-    if (DEV_BYPASS) {
-      return res.json({
-        status: true,
-        message: 'OTP sent successfully',
-        data: {
-          otp,
-          message: 'Use this OTP for verification (development mode)'
-        }
-      });
-    }
+    // // In development mode, return OTP in response
+    // if (DEV_BYPASS) {
+    //   return res.json({
+    //     status: true,
+    //     message: 'OTP sent successfully',
+    //     data: {
+    //       otp,
+    //       message: 'Use this OTP for verification (development mode)'
+    //     }
+    //   });
+    // }
 
     // In production, send OTP via Fast2SMS
     const smsResult = await fast2smsService.sendOTP(phone, otp);
     
     if (smsResult.success) {
-      res.json({
+      return res.json({
         status: true,
         message: 'OTP sent successfully',
         data: {}
       });
     } else {
       console.error('SMS sending failed:', smsResult.message);
-      res.status(500).json({
+      return res.status(500).json({
         status: false,
         message: 'Failed to send OTP. Please try again.',
         data: {}
@@ -291,7 +291,7 @@ exports.sendOtp = async (req, res) => {
 
   } catch (err) {
     console.error('Error in sendOtp:', err);
-    res.status(500).json({ status: false, message: 'Server error', data: {} });
+    return res.status(500).json({ status: false, message: 'Server error', data: {} });
   }
 };
 
@@ -343,30 +343,30 @@ exports.resendOtp = async (req, res) => {
     });
     await otpRecord.save();
 
-    // In development mode, return OTP in response
-    if (DEV_BYPASS) {
-      return res.json({
-        status: true,
-        message: 'New OTP sent successfully',
-        data: {
-          otp,
-          message: 'Use this OTP for verification (development mode)'
-        }
-      });
-    }
+    // // In development mode, return OTP in response
+    // if (DEV_BYPASS) {
+    //   return res.json({
+    //     status: true,
+    //     message: 'New OTP sent successfully',
+    //     data: {
+    //       otp,
+    //       message: 'Use this OTP for verification (development mode)'
+    //     }
+    //   });
+    // }
 
     // In production, send OTP via Fast2SMS
     const smsResult = await fast2smsService.sendOTP(phone, otp);
     
     if (smsResult.success) {
-      res.json({
+      return res.json({
         status: true,
         message: 'New OTP sent successfully via SMS',
         data: {}
       });
     } else {
       console.error('SMS sending failed:', smsResult.message);
-      res.status(500).json({
+      return res.status(500).json({
         status: false,
         message: 'Failed to send new OTP. Please try again.',
         data: {}
@@ -375,7 +375,7 @@ exports.resendOtp = async (req, res) => {
 
   } catch (err) {
     console.error('Error in resendOtp:', err);
-    res.status(500).json({ status: false, message: 'Server error', data: {} });
+    return res.status(500).json({ status: false, message: 'Server error', data: {} });
   }
 };
 
@@ -463,7 +463,7 @@ exports.verifyOtp = async (req, res) => {
 
     if (!user) {
       // New user - don't create record yet, just verify OTP
-      res.json({
+      return res.json({
         status: true,
         message: 'OTP verified successfully. Please complete your profile.',
         data: {
@@ -476,7 +476,7 @@ exports.verifyOtp = async (req, res) => {
       });
     } else if (!user.isProfileCompleted) {
       // Existing user with incomplete profile
-      res.json({
+      return res.json({
         status: true,
         message: 'OTP verified successfully. Please complete your profile.',
         data: {
@@ -502,7 +502,7 @@ exports.verifyOtp = async (req, res) => {
       // Existing user with complete profile - generate token
       const token = jwt.sign({ id: user._id, role: 'user' }, process.env.JWT_SECRET, { expiresIn: '30d' });
 
-      res.json({
+      return res.json({
         status: true,
         message: 'OTP verified successfully. Welcome back!',
         data: {
@@ -528,7 +528,7 @@ exports.verifyOtp = async (req, res) => {
 
   } catch (err) {
     console.error('Error in verifyOtp:', err);
-    res.status(500).json({ 
+    return res.status(500).json({ 
       status: false, 
       message: 'Server error during OTP verification', 
       data: {} 
@@ -550,7 +550,7 @@ exports.refreshToken = async (req, res) => {
     // Generate new token
     const token = jwt.sign({ id: user._id, role: 'user' }, process.env.JWT_SECRET, { expiresIn: '30d' });
 
-    res.json({
+    return res.json({
       status: true,
       message: 'Token refreshed successfully',
       data: {
@@ -566,7 +566,7 @@ exports.refreshToken = async (req, res) => {
     });
   } catch (err) {
     console.error('Error in refreshToken:', err);
-    res.status(500).json({ status: false, message: 'Server error', data: {} });
+    return res.status(500).json({ status: false, message: 'Server error', data: {} });
   }
 };
 
@@ -631,13 +631,13 @@ exports.changePassword = async (req, res) => {
     user.password = hashedNewPassword;
     await user.save();
 
-    res.json({
+    return res.json({
       status: true,
       message: 'Password changed successfully',
       data: {}
     });
   } catch (err) {
     console.error('Error in changePassword:', err);
-    res.status(500).json({ status: false, message: 'Server error', data: {} });
+    return res.status(500).json({ status: false, message: 'Server error', data: {} });
   }
 }; 

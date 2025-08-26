@@ -6,12 +6,21 @@ exports.adminLoginValidation = [
 ];
 
 exports.userLoginValidation = [
-  body('phone').isMobilePhone().withMessage('Valid phone number is required'),
+  body('phone')
+    .isLength({ min: 10, max: 10 })
+    .withMessage('Phone number must be exactly 10 digits')
+    .matches(/^\d{10}$/)
+    .withMessage('Phone number must contain only digits'),
 ];
 
 exports.profileValidation = [
   body('name').notEmpty().withMessage('Name is required'),
-  body('phone').optional().isMobilePhone().withMessage('Valid phone number is required for new users'),
+  body('phone')
+    .optional()
+    .isLength({ min: 10, max: 10 })
+    .withMessage('Phone number must be exactly 10 digits')
+    .matches(/^\d{10}$/)
+    .withMessage('Phone number must contain only digits'),
 ];
 
 exports.updateProfileValidation = [
