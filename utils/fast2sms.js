@@ -8,7 +8,7 @@ export const sendOTP = async (mobile, otp) => {
     const response = await fetch('https://www.fast2sms.com/dev/bulkV2', {
       method: "POST",
       headers: {
-        Authorization: process.env.FAST2SMS_API_KEY,
+        Authorization: 'AsUidx8RhlMoyXjTZuqnbvgrH24VIFNe7YCQJKLtkGc1D60pESm7DY2b6X8NP9f3JvsSZCaxcM5pjwoV',
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
