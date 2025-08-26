@@ -114,7 +114,7 @@ const Login = ({ onLogin }) => {
           align="center"
           sx={{ color: 'text.secondary', mt: 4, fontSize: '8px' }}
         >
-          Latest 26.2-Aug-25
+          Latest 26.02-Aug-25
         </Typography>
 
         <Snackbar open={snackbar.open} autoHideDuration={4000} onClose={handleCloseSnackbar}>
